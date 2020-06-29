@@ -6,13 +6,13 @@
 
 {% label %}运行输出{% endlabel %}
 ```bash
-rustc 1.35.0-nightly (474e7a648 2019-04-07)
+rustc 1.46.0-nightly (7750c3d46 2020-06-26)
 binary: rustc
-commit-hash: 474e7a6486758ea6fc761893b1a49cd9076fb0ab
-commit-date: 2019-04-07
+commit-hash: 7750c3d46bc19784adb1ee6e37a5ec7e4cd7e772
+commit-date: 2020-06-26
 host: x86_64-unknown-linux-gnu
-release: 1.35.0-nightly
-LLVM version: 8.0
+release: 1.46.0-nightly
+LLVM version: 10.0
 ```
 
 上面这段输出来自一个 x86_64 平台下的 Linux 系统。我们能看到，host 字段的值为三元组 x86_64-unknown-linux-gnu，它包含了 CPU 架构 x86_64、供应商 unknown、操作系统 linux 和二进制接口 gnu。
