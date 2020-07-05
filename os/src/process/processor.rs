@@ -74,6 +74,9 @@ impl Processor {
             fn __restore(context: usize);
         }
         // 从 current_thread 中取出 Context
+        if self.current_thread.is_none() {
+            panic!("no thread to run, shutting down");
+        }
         let context = self.current_thread().prepare();
         // 从此将没有回头
         unsafe {
