@@ -69,8 +69,8 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
 
     start_kernel_thread();
     start_kernel_thread();
-    // start_user_thread("hello_world");
-    // start_user_thread("notebook");
+    start_user_thread("hello_world");
+    start_user_thread("notebook");
 
     PROCESSOR.get().run()
 }
@@ -83,7 +83,6 @@ fn start_kernel_thread() {
 
 fn test() {
     println!("hello");
-    loop {};
 }
 
 fn start_user_thread(name: &str) {

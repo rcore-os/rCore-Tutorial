@@ -7,7 +7,7 @@ use riscv::register::{sie, time};
 pub static mut TICKS: usize = 0;
 
 /// 时钟中断的间隔，单位是 CPU 指令
-static INTERVAL: usize = 10000000;
+static INTERVAL: usize = 100000;
 
 /// 初始化时钟中断
 ///
