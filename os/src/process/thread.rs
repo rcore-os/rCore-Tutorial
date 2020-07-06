@@ -2,10 +2,7 @@
 
 use super::*;
 use crate::fs::*;
-use core::{
-    hash::{Hash, Hasher},
-    mem::size_of,
-};
+use core::hash::{Hash, Hasher};
 
 /// 线程 ID 使用 `isize`，可以用负数表示错误
 pub type ThreadID = isize;
@@ -45,16 +42,8 @@ impl Thread {
         self.process.write().memory_set.activate();
         // 取出 Context
         let parked_frame = self.inner().context.take().unwrap();
-
-        if self.process.read().is_user {
-            // 用户线程则将 Context 放至内核栈顶
-            KERNEL_STACK.push_context(parked_frame)
-        } else {
-            // 内核线程则将 Context 放至 sp 下
-            let context = (parked_frame.sp() - size_of::<Context>()) as *mut Context;
-            unsafe { *context = parked_frame };
-            context
-        }
+        // 将 Context 放至内核栈顶
+        unsafe { KERNEL_STACK.push_context(parked_frame) }
     }
 
     /// 发生时钟中断后暂停线程，保存状态

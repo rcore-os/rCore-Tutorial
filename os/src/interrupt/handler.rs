@@ -44,6 +44,7 @@ pub fn init() {
 /// 具体的中断类型需要根据 scause 来推断，然后分别处理
 #[no_mangle]
 pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> *mut Context {
+    // 返回的 Context 必须位于放在内核栈顶
     match scause.cause() {
         // 断点中断（ebreak）
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
