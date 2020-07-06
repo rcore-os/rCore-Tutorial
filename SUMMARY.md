@@ -2,10 +2,12 @@
 
 * [实验简介](README.md)
 
+<!--
 ## 开发笔记
 * [文档代码划分](docs/format/partition.md)
 * [文档格式规范](docs/format/doc.md)
 * [代码格式规范](docs/format/code.md)
+-->
 
 ## 实验之前
 <!-- TODO * [Rust 基础介绍](docs/pre-lab/rust.md)  -->
@@ -71,3 +73,6 @@
   * [处理文件描述符](docs/lab-6/guide/part-5.md)
   * [条件变量](docs/lab-6/guide/part-6.md)
   * [小结](docs/lab-6/guide/summary.md)
+
+## 实验题
+* [实验一：中断](docs/lab-1/practice.md)
