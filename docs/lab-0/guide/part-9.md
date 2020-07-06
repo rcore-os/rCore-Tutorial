@@ -247,6 +247,10 @@ extern "C" fn abort() -> ! {
 //!   内嵌整个汇编文件
 #![feature(global_asm)]
 //!
+//! - `#![feature(llvm_asm)]`
+//!   声明需要使用 llvm_asm 宏特性
+#![feature(llvm_asm)]
+//!
 //! - `#![feature(panic_info_message)]`  
 //!   panic! 时，获取其中的信息并打印
 #![feature(panic_info_message)]

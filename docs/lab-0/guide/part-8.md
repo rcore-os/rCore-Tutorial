@@ -57,6 +57,10 @@ PMP1: 0x0000000000000000-0xffffffffffffffff (A,R,W,X)
 //! - `#![feature(global_asm)]`
 //!   内嵌整个汇编文件
 #![feature(global_asm)]
+//!
+//! - `#![feature(llvm_asm)]`
+//!   声明需要使用 llvm_asm 宏特性
+#![feature(llvm_asm)]
 
 // 汇编编写的程序入口，具体见该文件
 global_asm!(include_str!("entry.asm"));
