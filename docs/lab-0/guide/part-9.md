@@ -147,11 +147,15 @@ struct Stdout;
 
 impl Write for Stdout {
     /// 打印一个字符串
-    /// 
-    /// 对于每一个字符调用 [`console_putchar`]
+    ///
+    /// [`console_putchar`] sbi 调用每次接受一个 `usize`，但实际上会把它作为 `u8` 来打印字符。
+    /// 因此，如果字符串中存在非 ASCII 字符，需要在 utf-8 编码下，对于每一个 `u8` 调用一次 [`console_putchar`]
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        let mut buffer = [0u8; 4];
         for c in s.chars() {
-            console_putchar(c as usize);
+            for code_point in c.encode_utf8(&mut buffer).as_bytes().iter() {
+                console_putchar(*code_point as usize);
+            }
         }
         Ok(())
     }
@@ -203,10 +207,10 @@ use crate::sbi::shutdown;
 /// 声明此函数是 panic 的回调
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
-    // `\x1b[??m` 是控制终端字符输出格式的指令，在支持的平台上可以改变文字颜色等等
-    // 这里使用错误红
-    // 需要全局开启 feature(panic_info_message) 才可以调用 .message() 函数
+    // `\x1b[??m` 是控制终端字符输出格式的指令，在支持的平台上可以改变文字颜色等等，这里使用红色
     // 参考：https://misc.flogisoft.com/bash/tip_colors_and_formatting
+    //
+    // 需要全局开启 feature(panic_info_message) 才可以调用 .message() 函数
     println!("\x1b[1;31mpanic: '{}'\x1b[0m", info.message().unwrap());
     shutdown()
 }
@@ -234,10 +238,6 @@ extern "C" fn abort() -> ! {
 //! - `#![no_main]`  
 //!   不使用 `main` 函数等全部 Rust-level 入口点来作为程序入口
 #![no_main]
-//!
-//! - `#![deny(missing_docs)]`  
-//!   任何没有注释的地方都会产生警告：这个属性用来压榨写实验指导的学长，同学可以删掉了
-#![warn(missing_docs)]
 //! # 一些 unstable 的功能需要在 crate 层级声明后才可以使用
 //! - `#![feature(llvm_asm)]`  
 //!   内嵌汇编
