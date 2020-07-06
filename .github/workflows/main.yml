@@ -11,14 +11,8 @@ jobs:
         with:
           target: riscv64imac-unknown-none-elf
           components: rustfmt, clippy
-      - name: Check user
-        run: |
-          cd user
-          cargo fmt -- --check
-          cargo clippy -- -D warnings
       - name: Check os
         run: |
-          export USER_IMG="../usr/build/riscv64.img"
           cd os
           cargo fmt -- --check
           cargo clippy -- -D warnings
@@ -42,7 +36,5 @@ jobs:
       - name: Install QEMU
         if: ${{ matrix.os == 'macos-latest' }}
         run: brew install qemu
-      - name: Build user
-        run: cd user && make build
       - name: Build os
         run: cd os && make build
