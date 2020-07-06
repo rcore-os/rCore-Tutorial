@@ -18,7 +18,6 @@ __interrupt:
     # 思考：sscratch 的值最初是在什么地方写入的？
 
     # 交换 sp 和 sscratch（切换到内核栈）
-    # （原子汇编指令 csrrw rd, csr, rs1：csr 的值写入 rd；同时 rs1 的值写入 csr）
     csrrw   sp, sscratch, sp
     # 在内核栈开辟 Context 的空间
     addi    sp, sp, -36*8
