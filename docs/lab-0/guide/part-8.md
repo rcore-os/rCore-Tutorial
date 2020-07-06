@@ -50,9 +50,9 @@ PMP1: 0x0000000000000000-0xffffffffffffffff (A,R,W,X)
 //!   不使用 `main` 函数等全部 Rust-level 入口点来作为程序入口
 #![no_main]
 //! # 一些 unstable 的功能需要在 crate 层级声明后才可以使用
-//! - `#![feature(asm)]`  
+//! - `#![feature(llvm_asm)]`  
 //!   内嵌汇编
-#![feature(asm)]
+#![feature(llvm_asm)]
 //!
 //! - `#![feature(global_asm)]`
 //!   内嵌整个汇编文件
@@ -117,7 +117,7 @@ BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
-.PHONY: doc kernel build clean qemu run env
+.PHONY: doc kernel build clean qemu run
 
 # 默认 build 为输出二进制文件
 build: $(BIN_FILE) 

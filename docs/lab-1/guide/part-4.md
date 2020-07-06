@@ -29,10 +29,13 @@
 __interrupt:
     # 在栈上开辟 Context 所需的空间
     addi    sp, sp, -34*8
+    
     # 保存通用寄存器，除了 x0（固定为 0）
     SAVE    x1, 1
-    addi    x1, sp, 34*8
     # 将原来的 sp（sp 又名 x2）写入 2 位置
+    addi    x1, sp, 34*8
+    SAVE    x1, 2
+    # 其他通用寄存器
     SAVE    x1, 2
     SAVE    x3, 3
     SAVE    x4, 4
@@ -70,10 +73,13 @@ __interrupt:
     SAVE    s1, 32
     SAVE    s2, 33
 
-    # Context, scause 和 stval 作为参数传入
-    mv a0, sp
-    csrr a1, scause
-    csrr a2, stval
+    # 调用 handle_interrupt，传入参数
+    # context: &mut Context
+    mv      a0, sp
+    # scause: Scause
+    csrr    a1, scause
+    # stval: usize
+    csrr    a2, stval
     jal  handle_interrupt
 
     .globl __restore
@@ -83,7 +89,6 @@ __restore:
     # 恢复 CSR
     LOAD    s1, 32
     LOAD    s2, 33
-    # 思考：为什么不恢复 scause 和 stval？如果不恢复，为什么之前要保存
     csrw    sstatus, s1
     csrw    sepc, s2
 

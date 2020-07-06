@@ -239,9 +239,9 @@ extern "C" fn abort() -> ! {
 //!   任何没有注释的地方都会产生警告：这个属性用来压榨写实验指导的学长，同学可以删掉了
 #![warn(missing_docs)]
 //! # 一些 unstable 的功能需要在 crate 层级声明后才可以使用
-//! - `#![feature(asm)]`  
+//! - `#![feature(llvm_asm)]`  
 //!   内嵌汇编
-#![feature(asm)]
+#![feature(llvm_asm)]
 //!
 //! - `#![feature(global_asm)]`  
 //!   内嵌整个汇编文件
