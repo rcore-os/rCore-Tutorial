@@ -47,8 +47,6 @@ pub extern "C" fn rust_main() {
     interrupt::init();
 
     println!("Hello, rCore-Tutorial!");
-    
-    unsafe {
-        llvm_asm!("ebreak")
-    }
+
+    unsafe { llvm_asm!("ebreak") }
 }

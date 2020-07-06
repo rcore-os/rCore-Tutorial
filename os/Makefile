@@ -3,14 +3,10 @@ MODE        := debug
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 
-USER_DIR	:= ../user
-USER_BUILD	:= $(USER_DIR)/build
-IMG_FILE	:= $(USER_BUILD)/disk.img
-
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
-.PHONY: doc kernel build clean qemu run env
+.PHONY: doc kernel build clean qemu run
 
 # 默认 build 为输出二进制文件
 build: $(BIN_FILE)
