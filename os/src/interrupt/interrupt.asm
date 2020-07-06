@@ -21,6 +21,7 @@ __interrupt:
     # 将原来的 sp（sp 又名 x2）写入 2 位置
     addi    x1, sp, 34*8
     SAVE    x1, 2
+    # 其他通用寄存器
     SAVE    x3, 3
     SAVE    x4, 4
     SAVE    x5, 5
