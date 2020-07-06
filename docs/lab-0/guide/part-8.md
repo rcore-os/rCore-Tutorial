@@ -59,7 +59,7 @@ PMP1: 0x0000000000000000-0xffffffffffffffff (A,R,W,X)
 #![feature(global_asm)]
 
 // 汇编编写的程序入口，具体见该文件
-global_asm!(include_str!("asm/entry.asm"));
+global_asm!(include_str!("entry.asm"));
 
 use core::panic::PanicInfo;
 

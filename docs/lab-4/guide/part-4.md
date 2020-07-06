@@ -54,7 +54,7 @@ impl KernelStack {
 
 在这个汇编代码中，我们需要加入对 `sscratch` 的判断和使用。
 
-{% label %}os/src/asm/interrupt.asm{% endlabel %}
+{% label %}os/src/interrupt.asm{% endlabel %}
 ```asm
 __interrupt:
     # 因为线程当前的栈不一定可用，必须切换到内核栈来保存 Context 并进行中断流程
@@ -79,7 +79,7 @@ __interrupt:
 
 以及事后的恢复：
 
-{% label %}os/src/asm/interrupt.asm{% endlabel %}
+{% label %}os/src/interrupt.asm{% endlabel %}
 ```asm
 # 离开中断
 # 此时内核栈顶被推入了一个 Context，而 a0 指向它

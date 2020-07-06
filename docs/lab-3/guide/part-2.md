@@ -6,7 +6,7 @@
 
 随后，我们把原来的 linker script 和之前在物理内存管理上的一些参数修改一下。
 
-{% label %}os/src/linker/linker.ld{% endlabel %}
+{% label %}os/src/linker.ld{% endlabel %}
 ```clike
 /* Linker Script 语法可以参见：http://www.scoberlin.de/content/media/http/informatik/gcc_docs/ld_3.html */
 
@@ -97,7 +97,7 @@ pub const KERNEL_MAP_OFFSET: usize = 0xffff_ffff_0000_0000;
 
 最后一步，我们需要告诉 RISC-V CPU 我们做了这些修改，也就是需要在启动时、在进入 `rust_main` 之前我们要完成一个从物理地址访存模式到虚拟访存模式的转换，同时这也意味着，我们要写一个简单的页表，完成这个线性映射：
 
-{% label %}os/src/asm/entry.asm{% endlabel %}
+{% label %}os/src/entry.asm{% endlabel %}
 ```assembly
 # 操作系统启动时所需的指令以及字段
 #

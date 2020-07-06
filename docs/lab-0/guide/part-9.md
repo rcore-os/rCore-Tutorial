@@ -257,7 +257,7 @@ mod panic;
 mod sbi;
 
 // 汇编编写的程序入口，具体见该文件
-global_asm!(include_str!("asm/entry.asm"));
+global_asm!(include_str!("entry.asm"));
 
 /// Rust 的入口函数
 ///
