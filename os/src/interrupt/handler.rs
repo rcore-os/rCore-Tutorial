@@ -10,7 +10,7 @@ use riscv::register::{
     sie, stvec,
 };
 
-global_asm!(include_str!("../asm/interrupt.asm"));
+global_asm!(include_str!("./interrupt.asm"));
 
 /// 初始化中断处理
 ///

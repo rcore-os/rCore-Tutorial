@@ -33,9 +33,9 @@ Program Header:
 
 ### 编写链接脚本
 
-我们使用**链接脚本（Linker Script）**来指定程序的内存布局。创建文件 `os/src/linker/linker.ld`：
+我们使用**链接脚本（Linker Script）**来指定程序的内存布局。创建文件 `os/src/linker.ld`：
 
-{% label %}os/src/linker/linker.ld{% endlabel %}
+{% label %}os/src/linker.ld{% endlabel %}
 ```cpp
 /* 有关 Linker Script 可以参考：https://sourceware.org/binutils/docs/ld/Scripts.html */
 
@@ -122,7 +122,7 @@ SECTIONS
 # 使用我们的 linker script 来进行链接
 [target.riscv64imac-unknown-none-elf]
 rustflags = [
-    "-C", "link-arg=-Tsrc/linker/linker.ld",
+    "-C", "link-arg=-Tsrc/linker.ld",
 ]
 ```
 

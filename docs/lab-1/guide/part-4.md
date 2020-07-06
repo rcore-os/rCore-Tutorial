@@ -8,9 +8,9 @@
 
 ### 编写汇编
 
-因为汇编代码较长，这里我们新建一个 `os/src/asm/interrupt.asm` 文件来编写这段操作：
+因为汇编代码较长，这里我们新建一个 `os/src/interrupt.asm` 文件来编写这段操作：
 
-{% label %}os/src/asm/interrupt.asm{% endlabel %}
+{% label %}os/src/interrupt.asm{% endlabel %}
 ```asm
 # 宏：将寄存器存到栈上
 .macro SAVE reg, offset

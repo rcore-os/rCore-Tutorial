@@ -35,7 +35,7 @@ OpenSBI 所做的一件事情就是把 CPU 从 M Mode 切换到 S Mode，接着�
 
 接着我们要在 `_start` 中设置内核的运行环境了，我们直接来看代码：
 
-{% label %}os/src/asm/entry.asm{% endlabel %}
+{% label %}os/src/entry.asm{% endlabel %}
 ```assembly
 # 操作系统启动时所需的指令以及字段
 #
@@ -88,7 +88,7 @@ boot_stack_top:
 #![feature(global_asm)]
 
 // 汇编编写的程序入口，具体见该文件
-global_asm!(include_str!("asm/entry.asm"));
+global_asm!(include_str!("entry.asm"));
 
 use core::panic::PanicInfo;
 
