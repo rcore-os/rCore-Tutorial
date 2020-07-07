@@ -36,7 +36,6 @@ __interrupt:
     addi    x1, sp, 34*8
     SAVE    x1, 2
     # 其他通用寄存器
-    SAVE    x1, 2
     SAVE    x3, 3
     SAVE    x4, 4
     SAVE    x5, 5
