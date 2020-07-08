@@ -25,7 +25,7 @@
     .section .text
     .globl __interrupt
 # 进入中断
-# 保存 Context 并且进入 rust 中的中断处理函数 interrupt::handler::handle_interrupt()
+# 保存 Context 并且进入 Rust 中的中断处理函数 interrupt::handler::handle_interrupt()
 __interrupt:
     # 在栈上开辟 Context 所需的空间
     addi    sp, sp, -34*8
