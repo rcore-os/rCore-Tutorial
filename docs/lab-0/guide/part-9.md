@@ -11,7 +11,7 @@ OpenSBI 实际上不仅起到了 bootloader 的作用，还为我们提供了一
 void sbi_console_putchar(int ch)
 ```
 
-而实际的过程是这样的：我们通过 ecall 发起系统调用。OpenSBI 会检查发起的系统调用的编号，如果编号在 0-8 之间，则进行处理，否则交由我们自己的中断处理程序处理（暂未实现）。想进一步了解编号在 0-8 之间的系统调用，请参考看 [OpenSBI 文档](https://github.com/riscv/riscv-sbi-doc/blob/master/riscv-sbi.adoc#function-listing-1)
+而实际的过程是这样的：我们通过 ecall 发起系统调用。OpenSBI 会检查发起的系统调用的编号，如果编号在 0-8 之间，则进行处理，否则交由我们自己的中断处理程序处理（暂未实现）。想进一步了解编号在 0-8 之间的系统调用，请参考看 [OpenSBI 文档](https://github.com/riscv/riscv-sbi-doc/blob/master/riscv-sbi.adoc#function-listing-1)。
 
 执行 `ecall` 前需要指定系统调用的编号，传递参数。一般而言，`a7` 为系统调用编号，`a0`、`a1` 和 `a2` 为参数：
 
@@ -36,7 +36,7 @@ fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
 }
 ```
 
-> **[info] 函数调用与 Calling convention **
+> **[info] 函数调用与 Calling Convention **
 >
 > 我们知道，编译器将高级语言源代码翻译成汇编代码。对于汇编语言而言，在最简单的编程模型中，所能够利用的只有指令集中提供的指令、各通用寄存器、 CPU 的状态、内存资源。那么，在高级语言中，我们进行一次函数调用，编译器要做哪些工作利用汇编语言来实现这一功能呢？
 >
@@ -46,7 +46,7 @@ fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
 > - 如何传递返回值？
 > - 如何保证函数返回后能从我们期望的位置继续执行？
 >
-> 等更多事项。通常编译器按照某种规范去翻译所有的函数调用，这种规范被称为 [Calling convention](https://en.wikipedia.org/wiki/Calling_convention) 。值得一提的是，为了实现函数调用，我们需要预先分配一块内存作为**调用栈** ，后面会看到调用栈在函数调用过程中极其重要。你也可以理解为什么第一章刚开始我们就要分配栈了。
+> 等更多事项。通常编译器按照某种规范去翻译所有的函数调用，这种规范被称为 [Calling Convention](https://en.wikipedia.org/wiki/Calling_convention) 。值得一提的是，为了实现函数调用，我们需要预先分配一块内存作为**调用栈** ，后面会看到调用栈在函数调用过程中极其重要。你也可以理解为什么第一章刚开始我们就要分配栈了。
 
 对于参数比较少且是基本数据类型的时候，我们从左到右使用寄存器 `a0` 到 `a7` 就可以完成参数的传递。具体规范可参考 [RISC-V Calling Convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf)。
 
@@ -147,11 +147,15 @@ struct Stdout;
 
 impl Write for Stdout {
     /// 打印一个字符串
-    /// 
-    /// 对于每一个字符调用 [`console_putchar`]
+    ///
+    /// [`console_putchar`] sbi 调用每次接受一个 `usize`，但实际上会把它作为 `u8` 来打印字符。
+    /// 因此，如果字符串中存在非 ASCII 字符，需要在 utf-8 编码下，对于每一个 `u8` 调用一次 [`console_putchar`]
     fn write_str(&mut self, s: &str) -> fmt::Result {
+        let mut buffer = [0u8; 4];
         for c in s.chars() {
-            console_putchar(c as usize);
+            for code_point in c.encode_utf8(&mut buffer).as_bytes().iter() {
+                console_putchar(*code_point as usize);
+            }
         }
         Ok(())
     }
@@ -203,10 +207,10 @@ use crate::sbi::shutdown;
 /// 声明此函数是 panic 的回调
 #[panic_handler]
 fn panic_handler(info: &PanicInfo) -> ! {
-    // `\x1b[??m` 是控制终端字符输出格式的指令，在支持的平台上可以改变文字颜色等等
-    // 这里使用错误红
-    // 需要全局开启 feature(panic_info_message) 才可以调用 .message() 函数
+    // `\x1b[??m` 是控制终端字符输出格式的指令，在支持的平台上可以改变文字颜色等等，这里使用红色
     // 参考：https://misc.flogisoft.com/bash/tip_colors_and_formatting
+    //
+    // 需要全局开启 feature(panic_info_message) 才可以调用 .message() 函数
     println!("\x1b[1;31mpanic: '{}'\x1b[0m", info.message().unwrap());
     shutdown()
 }
@@ -234,14 +238,10 @@ extern "C" fn abort() -> ! {
 //! - `#![no_main]`  
 //!   不使用 `main` 函数等全部 Rust-level 入口点来作为程序入口
 #![no_main]
-//!
-//! - `#![deny(missing_docs)]`  
-//!   任何没有注释的地方都会产生警告：这个属性用来压榨写实验指导的学长，同学可以删掉了
-#![warn(missing_docs)]
 //! # 一些 unstable 的功能需要在 crate 层级声明后才可以使用
-//! - `#![feature(asm)]`  
+//! - `#![feature(llvm_asm)]`  
 //!   内嵌汇编
-#![feature(asm)]
+#![feature(llvm_asm)]
 //!
 //! - `#![feature(global_asm)]`  
 //!   内嵌整个汇编文件

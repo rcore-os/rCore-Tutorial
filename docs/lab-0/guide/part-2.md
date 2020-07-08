@@ -11,7 +11,7 @@
 #![no_std]
 
 fn main() {
-    println!("Hello, world!");
+    println!("Hello, rCore-Tutorial!");
 }
 ```
 
@@ -22,7 +22,7 @@ fn main() {
 error: cannot find macro `println` in this scope
  --> src/main.rs:3:5
   |
-7 |     println!("Hello, world!");
+7 |     println!("Hello, rCore-Tutorial!");
   |     ^^^^^^^
 error: `#[panic_handler]` function required, but not found
 error: language item required, but not found: `eh_personality`

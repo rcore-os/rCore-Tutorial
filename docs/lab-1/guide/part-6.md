@@ -81,7 +81,7 @@ pub fn tick() {
     unsafe {
         TICKS += 1;
         if TICKS % 100 == 0 {
-            println!("100 ticks~");
+            println!("{} tick", TICKS);
         }
     }
 }
@@ -93,14 +93,6 @@ pub fn tick() {
 
 {% label %}os/src/interrupt/handler.rs{% endlabel %}
 ```rust
-use super::timer;
-use super::context::Context;
-use riscv::register::{
-    stvec,
-    scause::{Trap, Exception, Interrupt},
-};
-...
-
 /// 中断的处理入口
 /// 
 /// `interrupt.asm` 首先保存寄存器至 Context，其作为参数和 scause 以及 stval 一并传入此函数
@@ -114,8 +106,8 @@ pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) {
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => supervisor_timer(context),
-        // 其他情况未实现
-        _ => unimplemented!("{:?}: {:x?}, stval: 0x{:x}", scause.cause(), context, stval),
+        // 其他情况，终止当前线程
+        _ => fault(context, scause, stval),
     }
 }
 
@@ -133,8 +125,18 @@ fn breakpoint(context: &mut Context) {
 fn supervisor_timer(_: &Context) {
     timer::tick();
 }
+
+/// 出现未能解决的异常
+fn fault(context: &mut Context, scause: Scause, stval: usize) {
+    panic!(
+        "Unresolved interrupt: {:?}\n{:x?}\nstval: {:x}",
+        scause.cause(),
+        context,
+        stval
+    );
+}
 ```
 
 至此，时钟中断就可以正常工作了。我们在 `os/interrupt/mod.rs` 中引入 `mod timer` 并在 初始化 `handler::init()` 语句的后面加入 `timer::init()` 就成功加载了模块。
 
-最后我们在 main 函数中去掉 `unreachable!()` 并插入 `loop {}` 防止程序退出，然后观察时钟中断。应当可以看到程序每隔一秒左右输出一次 `100 ticks~`。
+最后我们在 main 函数中去掉 `unreachable!()`，然后观察时钟中断。应当可以看到程序每隔一秒左右进行一次输出 `100 ticks` `200 ticks`……

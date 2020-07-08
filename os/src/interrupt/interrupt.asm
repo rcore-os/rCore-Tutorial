@@ -11,7 +11,7 @@
     .section .text
     .globl __interrupt
 # 进入中断
-# 保存 Context 并且进入 rust 中的中断处理函数 interrupt::handler::handle_interrupt()
+# 保存 Context 并且进入 Rust 中的中断处理函数 interrupt::handler::handle_interrupt()
 __interrupt:
     # 因为线程当前的栈不一定可用，必须切换到内核栈来保存 Context 并进行中断流程
     # 因此，我们使用 sscratch 寄存器保存内核栈地址
