@@ -25,13 +25,12 @@ reveal 还会把行间距吃掉，所以手动加 <br>
     {% endreveal %}
 
     <br>
-2.  回答：`lab-1` 分支中的 `rust_main` 函数存在什么问题？它会导致什么结果？
+2.  回答：如果去掉 `rust_main` 后的 `panic` 会发生什么，为什么？
 
     {% reveal %}
-> `rust_main` 返回后，程序并没有停止。`rust_main` 是在 `entry.asm` 中通过 `jal` 指令调用的，因此其执行完后会回到 `entry.asm` 中。
-> 但是，`entry.asm` 并没有在后面写任何指令，这意味着程序将接着向后执行内存中的任何指令。
+> `rust_main` 返回后，程序并没有停止。`rust_main` 是在 `entry.asm` 中通过 `jal` 指令调用的，因此其执行完后会回到 `entry.asm` 中。但是，`entry.asm` 并没有在后面写任何指令，这意味着程序将接着向后执行内存中的任何指令。
 >
-> 我们可以通过 `rust-objdump -d -S os/target/riscv64imac-unknown-none-elf/debug/os | less` 来查看汇编代码，其中就能看到：`_start` 只有短短三条指令，而后面则放着许多 Rust 库中的函数。好在程序在这里陷入了循环，因此我们看上去操作系统还在继续执行，并且时钟中断还能正常触发。
+> 我们可以通过 `rust-objdump -d -S os/target/riscv64imac-unknown-none-elf/debug/os | less` 来查看汇编代码，其中就能看到：`_start` 只有短短三条指令，而后面则放着许多 Rust 库中的函数。这些指令可能导致程序进入循环，或崩溃退出。
     {% endreveal %}
 
     <br>
@@ -52,13 +51,11 @@ reveal 还会把行间距吃掉，所以手动加 <br>
         <br>
     3.  添加或修改少量代码，使得运行时触发这个异常，并且打印出 `SUCCESS!`。
         - 要求：不允许添加或修改任何 unsafe 代码
-        - 提示：至少有两种只需要改动一行代码的实现方法
 
         <br>
 
         {% reveal %}
-> - 解法 1：在 `entry.asm` 中，`jal rust_main` 后，插入一行 `jr x0`（跳转至 `x0` 寄存器的地址，即 `0x0`）
->
-> - 解法 2：在 `interrupt/handler.rs` 的 `breakpoint` 函数中，将 `context.sepc += 2` 修改为 `context.sepc = 0`（则 `sret` 时程序会跳转到 `0x0`）
+> - 解法 1：在 `interrupt/handler.rs` 的 `breakpoint` 函数中，将 `context.sepc += 2` 修改为 `context.sepc = 0`（则 `sret` 时程序会跳转到 `0x0`）
+> - 解法 2：去除 `rust_main` 中的 `panic` 语句，并在 `entry.asm` 的 `jal rust_main` 之后，添加一行读取 `0x0` 地址的指令（例如 `jr x0` 或 `ld x1, (x0)`）
 
         {% endreveal %}
