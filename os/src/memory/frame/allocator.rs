@@ -11,7 +11,7 @@ use spin::Mutex;
 lazy_static! {
     /// 帧分配器
     pub static ref FRAME_ALLOCATOR: Mutex<FrameAllocator<AllocatorImpl>> = Mutex::new(FrameAllocator::new(Range::from(
-            PhysicalPageNumber::ceil(PhysicalAddress::from(*KERNEL_END_ADDRESS))..PhysicalPageNumber::floor(MEMORY_END_ADDRESS),
+            PhysicalPageNumber::ceil(*KERNEL_END_ADDRESS)..PhysicalPageNumber::floor(MEMORY_END_ADDRESS),
         )
     ));
 }
