@@ -109,7 +109,7 @@ pub extern "C" fn rust_main() -> ! {
     }
     println!("heap test passed");
 
-    loop{}
+    loop {}
 }
 ```
 

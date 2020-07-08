@@ -44,16 +44,16 @@ pub const MEMORY_END_ADDRESS: PhysicalAddress = PhysicalAddress(0x8800_0000);
 ///
 /// 使用 `Tracker` 其实就很像使用一个 smart pointer。如果需要引用计数，
 /// 就在外面再套一层 [`Arc`](alloc::sync::Arc) 就好
-pub struct FrameTracker(PhysicalAddress);
+pub struct FrameTracker(pub(super) PhysicalPageNumber);
 
 impl FrameTracker {
     /// 帧的物理地址
     pub fn address(&self) -> PhysicalAddress {
-        self.0
+        self.0.into()
     }
     /// 帧的物理页号
     pub fn page_number(&self) -> PhysicalPageNumber {
-        PhysicalPageNumber::from(self.0)
+        self.0
     }
 }
 
@@ -76,7 +76,6 @@ lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<FrameAllocator<AllocatorImpl>> = Mutex::new(FrameAllocator::new(Range::from(
             PhysicalPageNumber::ceil(PhysicalAddress::from(*KERNEL_END_ADDRESS))..PhysicalPageNumber::floor(MEMORY_END_ADDRESS),
         )
-
     ));
 }
 
@@ -102,7 +101,7 @@ impl<T: Allocator> FrameAllocator<T> {
         self.allocator
             .alloc()
             .ok_or("no available frame to allocate")
-            .map(|offset| FrameTracker::from(self.start_ppn + offset))
+            .map(|offset| FrameTracker(self.start_ppn + offset))
     }
 
     /// 将被释放的帧添加到空闲列表的尾部
@@ -119,7 +118,7 @@ impl<T: Allocator> FrameAllocator<T> {
 
 有关具体的算法，我们封装了一个分配器需要的 Rust trait：
 
-{% label %}os/src/data_structure/mod.rs{% endlabel %}
+{% label %}os/src/algorithm/src/allocator/mod.rs{% endlabel %}
 ```rust
 /// 分配器：固定容量，每次分配 / 回收一个元素
 pub trait Allocator {
@@ -132,7 +131,7 @@ pub trait Allocator {
 }
 ```
 
-并在 `os/src/data_structure/` 中分别实现了链表和线段树算法，具体内容可以参考代码。
+并在 `os/src/algorithm/src/allocator/` 中分别实现了链表和线段树算法，具体内容可以参考代码。
 
 我们注意到，我们使用了 `lazy_static!` 和 `Mutex` 来包装分配器。需要知道，对于 `static mut` 类型的修改操作是 unsafe 的。我们之后会提到线程的概念，对于静态数据，所有的线程都能访问。当一个线程正在访问这段数据的时候，如果另一个线程也来访问，就可能会产生冲突，并带来难以预测的结果。
 
@@ -166,7 +165,7 @@ pub extern "C" fn rust_main() -> ! {
         println!("{} and {}", frame_0.address(), frame_1.address());
     }
 
-    loop{}
+    loop {}
 }
 ```
 
@@ -201,7 +200,7 @@ pub extern "C" fn rust_main() -> ! {
             Result::Err(err) => panic!("{}", err)
     };
 
-    loop{}
+    loop {}
 }
 ```
 
