@@ -25,7 +25,7 @@ pub const MEMORY_END_ADDRESS: PhysicalAddress = PhysicalAddress(0x8800_0000);
 
 为了方便管理所有的物理页，我们需要实现一个分配器可以进行分配和回收的操作，在这之前，我们需要先把物理页的概念进行封装。注意到，物理页在实际上其实是连续的一片内存区域，这里我们只是把区域的其实物理地址封装到了一个 `FrameTracker` 里面。
 
-{% label %}os/src/memory/frame_tracker.rs{% endlabel %}
+{% label %}os/src/memory/frame/frame_tracker.rs{% endlabel %}
 ```rust
 /// 分配出的物理页
 ///
