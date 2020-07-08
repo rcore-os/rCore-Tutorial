@@ -313,7 +313,7 @@ pub extern "C" fn rust_main() -> ! {
 
     println!("kernel remapped");
 
-    loop {}
+    panic!()
 }
 ```
 

@@ -3,7 +3,7 @@
 # 我们在 linker.ld 中将程序入口设置为了 _start，因此在这里我们将填充这个标签
 # 它将会执行一些必要操作，然后跳转至我们用 rust 编写的入口函数
 #
-# 关于 RISC-V 下的汇编语言，可以参考 https://rv8.io/asm.html
+# 关于 RISC-V 下的汇编语言，可以参考 https://github.com/riscv/riscv-asm-manual/blob/master/riscv-asm.md
 # %hi 表示取 [12,32) 位，%lo 表示取 [0,12) 位
 
     .section .text.entry

@@ -2,7 +2,7 @@
 
 ### 物理页
 
-通常，我们在分配物理内存时并不是以字节为单位，而是以一**物理页(Frame)**，即连续的 4 KB 字节为单位分配。我们希望用物理页号（Physical Page Number，PPN）来代表一物理页，实际上代表物理地址范围在 $$[\text{PPN}\times 4\text{KB},(\text{PPN}+1)\times 4\text{KB})$$ 的一物理页。
+通常，我们在分配物理内存时并不是以字节为单位，而是以一**物理页（Frame）**，即连续的 4 KB 字节为单位分配。我们希望用物理页号（Physical Page Number，PPN）来代表一物理页，实际上代表物理地址范围在 $$[\text{PPN}\times 4\text{KB},(\text{PPN}+1)\times 4\text{KB})$$ 的一物理页。
 
 不难看出，物理页号与物理页形成一一映射。为了能够使用物理页号这种表达方式，每个物理页的开头地址必须是 4 KB 的倍数。但这也给了我们一个方便：对于一个物理地址，其除以 4096（或者说右移 12 位）的商即为这个物理地址所在的物理页号。
 
@@ -23,9 +23,9 @@ pub const MEMORY_END_ADDRESS: PhysicalAddress = PhysicalAddress(0x8800_0000);
 
 ### 分配和回收
 
-为了方便管理所有的物理页，我们需要实现一个分配器可以进行分配和回收的操作，在这之前，我们需要先把物理页的概念进行封装。注意到，物理页在实际上其实是连续的一片内存区域，这里我们只是把区域的其实物理地址封装到了一个 `FrameTracker` 里面。
+为了方便管理所有的物理页，我们需要实现一个分配器可以进行分配和回收的操作，在这之前，我们需要先把物理页的概念进行封装。注意到，物理页在实际上其实是连续的一片内存区域，这里我们只是把区域的起始物理地址封装到了一个 `FrameTracker` 里面。
 
-{% label %}os/src/memory/frame_tracker.rs{% endlabel %}
+{% label %}os/src/memory/frame/frame_tracker.rs{% endlabel %}
 ```rust
 /// 分配出的物理页
 ///
@@ -44,16 +44,16 @@ pub const MEMORY_END_ADDRESS: PhysicalAddress = PhysicalAddress(0x8800_0000);
 ///
 /// 使用 `Tracker` 其实就很像使用一个 smart pointer。如果需要引用计数，
 /// 就在外面再套一层 [`Arc`](alloc::sync::Arc) 就好
-pub struct FrameTracker(PhysicalAddress);
+pub struct FrameTracker(pub(super) PhysicalPageNumber);
 
 impl FrameTracker {
     /// 帧的物理地址
     pub fn address(&self) -> PhysicalAddress {
-        self.0
+        self.0.into()
     }
     /// 帧的物理页号
     pub fn page_number(&self) -> PhysicalPageNumber {
-        PhysicalPageNumber::from(self.0)
+        self.0
     }
 }
 
@@ -76,7 +76,6 @@ lazy_static! {
     pub static ref FRAME_ALLOCATOR: Mutex<FrameAllocator<AllocatorImpl>> = Mutex::new(FrameAllocator::new(Range::from(
             PhysicalPageNumber::ceil(PhysicalAddress::from(*KERNEL_END_ADDRESS))..PhysicalPageNumber::floor(MEMORY_END_ADDRESS),
         )
-
     ));
 }
 
@@ -102,7 +101,7 @@ impl<T: Allocator> FrameAllocator<T> {
         self.allocator
             .alloc()
             .ok_or("no available frame to allocate")
-            .map(|offset| FrameTracker::from(self.start_ppn + offset))
+            .map(|offset| FrameTracker(self.start_ppn + offset))
     }
 
     /// 将被释放的帧添加到空闲列表的尾部
@@ -119,7 +118,7 @@ impl<T: Allocator> FrameAllocator<T> {
 
 有关具体的算法，我们封装了一个分配器需要的 Rust trait：
 
-{% label %}os/src/data_structure/mod.rs{% endlabel %}
+{% label %}os/src/algorithm/src/allocator/mod.rs{% endlabel %}
 ```rust
 /// 分配器：固定容量，每次分配 / 回收一个元素
 pub trait Allocator {
@@ -132,7 +131,7 @@ pub trait Allocator {
 }
 ```
 
-并在 `os/src/data_structure/` 中分别实现了链表和线段树算法，具体内容可以参考代码。
+并在 `os/src/algorithm/src/allocator/` 中分别实现了链表和线段树算法，具体内容可以参考代码。
 
 我们注意到，我们使用了 `lazy_static!` 和 `Mutex` 来包装分配器。需要知道，对于 `static mut` 类型的修改操作是 unsafe 的。我们之后会提到线程的概念，对于静态数据，所有的线程都能访问。当一个线程正在访问这段数据的时候，如果另一个线程也来访问，就可能会产生冲突，并带来难以预测的结果。
 
@@ -140,7 +139,7 @@ pub trait Allocator {
 
 这里使用的是 `spin::Mutex<T>`，我们需要在 `os/Cargo.toml` 中添加依赖。幸运的是，它也无需任何操作系统支持（即支持 `no_std`），我们可以放心使用。
 
-最后，在把新写的模块加载进来，并在 main 函数中进行简单的测试：
+最后，我们把新写的模块加载进来，并在 main 函数中进行简单的测试：
 
 {% label %}os/src/main.rs{% endlabel %}
 ```rust
@@ -166,7 +165,7 @@ pub extern "C" fn rust_main() -> ! {
         println!("{} and {}", frame_0.address(), frame_1.address());
     }
 
-    loop{}
+    panic!()
 }
 ```
 
@@ -201,8 +200,7 @@ pub extern "C" fn rust_main() -> ! {
             Result::Err(err) => panic!("{}", err)
     };
 
-    loop{}
-}
+    panic!()
 ```
 
 思考，和上面的代码有何不同，我们的设计是否存在一些语法上的设计缺陷？

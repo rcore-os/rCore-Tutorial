@@ -76,3 +76,4 @@
 
 ## 实验题
 * [实验一：中断](docs/lab-1/practice.md)
+* [实验二：内存分配](docs/lab-2/practice.md)
