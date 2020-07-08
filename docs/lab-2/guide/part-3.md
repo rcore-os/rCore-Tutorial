@@ -165,7 +165,7 @@ pub extern "C" fn rust_main() -> ! {
         println!("{} and {}", frame_0.address(), frame_1.address());
     }
 
-    loop {}
+    panic!()
 }
 ```
 
@@ -200,8 +200,7 @@ pub extern "C" fn rust_main() -> ! {
             Result::Err(err) => panic!("{}", err)
     };
 
-    loop {}
-}
+    panic!()
 ```
 
 思考，和上面的代码有何不同，我们的设计是否存在一些语法上的设计缺陷？
