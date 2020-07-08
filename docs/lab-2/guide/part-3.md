@@ -23,7 +23,7 @@ pub const MEMORY_END_ADDRESS: PhysicalAddress = PhysicalAddress(0x8800_0000);
 
 ### 分配和回收
 
-为了方便管理所有的物理页，我们需要实现一个分配器可以进行分配和回收的操作，在这之前，我们需要先把物理页的概念进行封装。注意到，物理页在实际上其实是连续的一片内存区域，这里我们只是把区域的其实物理地址封装到了一个 `FrameTracker` 里面。
+为了方便管理所有的物理页，我们需要实现一个分配器可以进行分配和回收的操作，在这之前，我们需要先把物理页的概念进行封装。注意到，物理页在实际上其实是连续的一片内存区域，这里我们只是把区域的起始物理地址封装到了一个 `FrameTracker` 里面。
 
 {% label %}os/src/memory/frame/frame_tracker.rs{% endlabel %}
 ```rust
@@ -139,7 +139,7 @@ pub trait Allocator {
 
 这里使用的是 `spin::Mutex<T>`，我们需要在 `os/Cargo.toml` 中添加依赖。幸运的是，它也无需任何操作系统支持（即支持 `no_std`），我们可以放心使用。
 
-最后，在把新写的模块加载进来，并在 main 函数中进行简单的测试：
+最后，我们把新写的模块加载进来，并在 main 函数中进行简单的测试：
 
 {% label %}os/src/main.rs{% endlabel %}
 ```rust
