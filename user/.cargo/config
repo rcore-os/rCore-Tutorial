@@ -1,3 +1,0 @@
-# 编译的目标平台
-[build]
-target = "riscv64imac-unknown-none-elf"
