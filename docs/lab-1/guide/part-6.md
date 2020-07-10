@@ -93,6 +93,11 @@ pub fn tick() {
 
 {% label %}os/src/interrupt/handler.rs{% endlabel %}
 ```rust
+use riscv::register::{
+    scause::{Exception, Interrupt, Scause, Trap},
+    sie, stvec,
+};
+
 /// 中断的处理入口
 /// 
 /// `interrupt.asm` 首先保存寄存器至 Context，其作为参数和 scause 以及 stval 一并传入此函数
@@ -139,4 +144,4 @@ fn fault(context: &mut Context, scause: Scause, stval: usize) {
 
 至此，时钟中断就可以正常工作了。我们在 `os/interrupt/mod.rs` 中引入 `mod timer` 并在 初始化 `handler::init()` 语句的后面加入 `timer::init()` 就成功加载了模块。
 
-最后我们在 main 函数中去掉 `unreachable!()`，然后观察时钟中断。应当可以看到程序每隔一秒左右进行一次输出 `100 ticks` `200 ticks`……
+最后我们在 main 函数中去掉 `unreachable!()` 以及 main 函数的返回值，然后观察时钟中断。应当可以看到程序每隔一秒左右进行一次输出 `100 ticks` `200 ticks`……
