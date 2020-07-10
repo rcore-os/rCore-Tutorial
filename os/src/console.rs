@@ -68,6 +68,8 @@ macro_rules! println {
 
 /// Quality of life debug macro
 /// Copy pasted from Rust's standard library
+#[macro_export]
+#[allow(unused_macros)]
 macro_rules! dbg {
     () => {
         println!("[{}:{}]", file!(), line!());
@@ -89,6 +91,8 @@ macro_rules! dbg {
 }
 
 /// Dbg macro, but print in hex
+#[macro_export]
+#[allow(unused_macros)]
 macro_rules! dbgx {
     () => {
         println!("[{}:{}]", file!(), line!());
