@@ -1,4 +1,4 @@
-/* Linker Script 语法可以参见：http://www.scoberlin.de/content/media/http/informatik/gcc_docs/ld_3.html */
+/* Linker Script 语法可以参见：https://sourceware.org/binutils/docs/ld/Scripts.html */
 
 /* 目标架构 */
 OUTPUT_ARCH(riscv)
