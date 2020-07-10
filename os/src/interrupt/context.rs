@@ -13,7 +13,7 @@ use riscv::register::sstatus::{self, Sstatus, SPP::*};
 /// ### `#[repr(C)]` 属性
 /// 要求 struct 按照 C 语言的规则进行内存分布，否则 Rust 可能按照其他规则进行内存排布
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct Context {
     /// 通用寄存器
     pub x: [usize; 32],
@@ -30,23 +30,6 @@ pub struct Context {
 impl Default for Context {
     fn default() -> Self {
         unsafe { zeroed() }
-    }
-}
-
-/// 格式化输出
-///
-/// # Example
-///
-/// ```rust
-/// println!("{:x?}", Context);   // {:x?} 表示用十六进制打印其中的数值
-/// ```
-impl fmt::Debug for Context {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Context")
-            .field("registers", &self.x)
-            .field("sstatus", &self.sstatus)
-            .field("sepc", &self.sepc)
-            .finish()
     }
 }
 

@@ -65,3 +65,46 @@ macro_rules! println {
         $crate::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
     }
 }
+
+/// Quality of life debug macro
+/// Copy pasted from Rust's standard library
+macro_rules! dbg {
+    () => {
+        println!("[{}:{}]", file!(), line!());
+    };
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                println!("[{}:{}] {} = {:#?}",
+                    file!(), line!(), stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+    // Recursively evaluate argument
+    ($val:expr,) => { $crate::dbg!($val) };
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::dbg!($val)),+,)
+    };
+}
+
+/// Dbg macro, but print in hex
+macro_rules! dbgx {
+    () => {
+        println!("[{}:{}]", file!(), line!());
+    };
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                // Print in hex
+                println!("[{}:{}] {} = {:#x?}",
+                    file!(), line!(), stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+    ($val:expr,) => { dbgx!($val) };
+    ($($val:expr),+ $(,)?) => {
+        ($(dbgx!($val)),+,)
+    };
+}
