@@ -13,6 +13,7 @@
 <!-- TODO * [Rust 基础介绍](docs/pre-lab/rust.md)  -->
 <!-- TODO * [操作系统背景知识](docs/pre-lab/os.md) -->
 * [环境部署](docs/pre-lab/env.md)
+* [GDB 调试方法*](docs/pre-lab/gdb.md)
 
 ## 实验指导
 * 实验指导零
