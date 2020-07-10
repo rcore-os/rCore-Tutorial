@@ -10,6 +10,8 @@
 ```rust
 use super::context::Context;
 use riscv::register::stvec;
+use riscv::register::scause::Scause;
+
 
 global_asm!(include_str!("./interrupt.asm"));
 
