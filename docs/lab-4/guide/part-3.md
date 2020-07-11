@@ -1,12 +1,12 @@
 ## 线程的切换
 
-回答一下前一节的思考题：当发生中断时，在 `__restore` 时，`a0` 寄存器的值是 `handle_interrupt` 的返回值。也就是说，如果我们令 `handle_interrupt` 返回另一个线程的 `*mut Context`，就可以在时钟中断后跳转到这个线程来执行。
+回答一下前一节的思考题：当发生中断时，在 `__restore` 时，`a0` 寄存器的值是 `handle_interrupt` 函数的返回值。也就是说，如果我们令 `handle_interrupt` 函数返回另一个线程的 `*mut Context`，就可以在时钟中断后跳转到这个线程来执行。
 
 ### 修改中断处理
 
-在线程切换时（即时钟中断时），`handle_interrupt` 需要将上一个线程的 `Context` 保存起来，然后将下一个线程的 `Context` 并返回。
+在线程切换时（即时钟中断时），`handle_interrupt` 函数需要将上一个线程的 `Context` 保存起来，然后将下一个线程的 `Context` 恢复并返回。
 
-> 注 1：为什么不直接 in-place 修改 `Context` 呢？这是因为 `handle_interrupt` 返回的 `Context` 指针除了存储上下文以外，还提供了内核栈的地址。这个会在后面详细阐述。
+> 注 1：为什么不直接 in-place 修改 `Context` 呢？这是因为 `handle_interrupt` 函数返回的 `Context` 指针除了存储上下文以外，还提供了内核栈的地址。这个会在后面详细阐述。
 >
 > 注 2：在 Rust 中，引用 `&mut` 和指针 `*mut` 只是编译器的理解不同，其本质都是一个存储对象地址的寄存器。这里返回值使用指针而不是引用，是因为其指向的位置十分特殊，其生命周期在这里没有意义。
 
@@ -32,11 +32,11 @@ fn supervisor_timer(context: &mut Context) -> *mut Context {
 }
 ```
 
-可以看到，当发生断点中断时，直接返回原来的上下文（修改一下 `sepc`）；而如果是时钟中断的时候，我们返回了 `PROCESSOR.get().tick(context)` 作为上下文，那它又是怎么工作的呢？
+可以看到，当发生断点中断时，直接返回原来的上下文（修改一下 `sepc`）；而如果是时钟中断的时候，我们通过执行`PROCESSOR.get().tick(context)`函数得到的返回值作为上下文，那它又是怎么工作的呢？
 
 ### 线程切换
 
-让我们看一下 `Processor::tick` 是如何实现的。
+让我们看一下 `Processor::tick` 函数是如何实现的。
 
 （调度器 `scheduler` 会在后面的小节中讲解，我们只需要知道它能够返回下一个等待执行的线程。）
 
@@ -66,7 +66,7 @@ pub fn tick(&mut self, context: &mut Context) -> *mut Context {
 
 #### 上下文 `Context` 的保存和取出
 
-在线程切换时，我们需要存下前一个线程的 `Context`，为此我们实现 `Thread::park`。
+在线程切换时，我们需要保存前一个线程的 `Context`，为此我们实现 `Thread::park`函数。
 
 {% label %}os/src/process/thread.rs: impl Thread{% endlabel %}
 ```rust
@@ -113,7 +113,7 @@ pub fn run(&self) -> *mut Context {
 
 #### 内核栈？
 
-现在，线程保存 `Context` 都是根据 `sp` 指针，在栈上压入一个 `Context` 来存储。但是，对于一个用户线程，可能只有上帝才知道触发中断时 `sp` 指到了哪里。所以，为了不让一个线程的崩溃导致操作系统的崩溃，我们需要提前准备好内核栈，当线程发生中断时用来存储线程的 `Context`。在下一节我们将具体讲解该如何做。
+现在，线程保存 `Context` 都是根据 `sp` 指针，在栈上压入一个 `Context` 来存储。但是，对于一个用户线程而言，它在用户态运行时用的是位于用户空间的用户栈。而它在用户态运行中如果触发中断，`sp` 指针指向的是用户空间的某地址，但此时RISC-V CPU会切换到内核态继续执行，就不能再用这个`sp`指针指向的用户空间地址了。这样，我们需要为sp指针准备好一个专门用于在内核态执行函数的内核栈。所以，为了不让一个线程的崩溃导致操作系统的崩溃，我们需要提前准备好内核栈，当线程发生中断时可用来存储线程的 `Context`。在下一节我们将具体讲解该如何做。
 
 ### 小结
 
