@@ -2,7 +2,7 @@
 
 ### 处理器抽象
 
-我们已经可以创建和保存线程了，现在，我们再抽象出「处理器」来存放线程池。同时，也需要单独存放目前正在执行的线程（即中断前执行的线程，因为操作系统在工作时一定属于中断之中）。
+我们已经可以创建和保存线程了，现在，我们再抽象出「处理器」来存放和管理线程池。同时，也需要存放和管理目前正在执行的线程（即中断前执行的线程，因为操作系统在工作时是处于中断、异常或系统调用服务之中）。
 
 {% label %}os/src/process/processor.rs{% endlabel %}
 ```rust
@@ -21,7 +21,7 @@ pub struct Processor {
 }
 ```
 
-注意到这里我们用了一个 `UnsafeWrapper`，这个东西相当于 Rust 提供的 `UnsafeCell`，或者 C 语言的指针：任何线程都可以随时从中获取一个 `&'static mut` 引用。由于在我们的设计中，**只有时钟中断（以及未来的系统调用）时可以使用 `PROCESSOR`**，而在此过程中，操作系统是关闭时钟中断的。因此，这里使用 `UnsafeCell` 是安全的。
+注意到这里我们用了一个 `UnsafeWrapper`，这个东西相当于 Rust 提供的 `UnsafeCell`，或者 C 语言的指针：任何线程都可以随时从中获取一个 `&'static mut` 引用。由于在我们的设计中，**只有时钟中断（以及异常或未来的系统调用）时可以使用 `PROCESSOR`**，而在此过程中，操作系统是关闭时钟中断的。因此，这里使用 `UnsafeCell` 是安全的。
 
 ### 调度器
 
@@ -115,25 +115,9 @@ fn sample_process(message: usize) {
 thread 7
 thread 6
 thread 5
-thread 4
-thread 3
-thread 2
-thread 1
-thread 0
-thread 6
-thread 5
-thread 4
-thread 2
-thread 1
+...
 thread 7
-thread 3
-thread 0
-100 tick
-thread 7
-thread 6
-thread 5
-thread 4
-thread 3
+...
 thread 2
 thread 1
 thread 0

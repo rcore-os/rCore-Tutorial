@@ -2,7 +2,7 @@
 
 为了实现 Sv39 页表，我们的思路是把一个分配好的物理页（即会自动销毁的 `FrameTracker`）拿来把数据填充作为页表，而页表中的每一项是一个 8 字节的页表项。
 
-对于页表项的位级别的操作，我们首先需要加入两个关于位操作的 crate：
+对于页表项的位级别的操作，首先需要加入两个关于位操作的 crate：
 
 {% label %}os/Cargo.toml{% endlabel %}
 ```toml
@@ -10,8 +10,9 @@ bitflags = "1.2.1"
 bit_field = "0.10.0"
 ```
 
-然后，首先了构建了关于虚拟页号获得三级 VPN 的函数：
+然后，首先了构建了通过虚拟页号获得三级 VPN 的函数：
 {% label %}os/src/memory/address.rs{% endlabel %}
+
 ```rust
 impl VirtualPageNumber {
     /// 得到一、二、三级页号

@@ -88,7 +88,7 @@ impl dev::BlockDevice for BlockDevice {
 
 ### virtio-blk 块设备驱动
 
-最后，我们来实现 virtio-blk 的驱动（也是调库）：
+最后，我们来实现 virtio-blk 的驱动（主要通过调用现成的库完成）：
 
 ```rust
 /// virtio 协议的块设备驱动
@@ -122,7 +122,7 @@ pub fn add_driver(header: &'static mut VirtIOHeader) {
 }
 ```
 
-需要注意的是，现在的逻辑怎么看都不像是之前提到的异步 DMA 再 IRQ 中断的技术，而更像是阻塞的读取。实际上的确是阻塞的读取，目前 virtio-drivers 库中的代码虽然调用了 DMA，但是返回时还是阻塞的逻辑，我们这里为了简化也没有设计 IRQ 的响应机制。
+需要注意的是，现在的逻辑怎么看都不像是之前提到的**异步 DMA + IRQ 中断**的高级 I/O 操作技术，而更像是阻塞的读取。实际上的确是阻塞的读取，目前 virtio-drivers 库中的代码虽然调用了 DMA，但是返回时还是阻塞的逻辑，我们这里为了简化也没有设计 IRQ 的响应机制。
 
 <!-- TODO 写 IRQ 响应 -->
 
