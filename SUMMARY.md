@@ -2,13 +2,6 @@
 
 * [实验简介](README.md)
 
-<!--
-## 开发笔记
-* [文档代码划分](docs/format/partition.md)
-* [文档格式规范](docs/format/doc.md)
-* [代码格式规范](docs/format/code.md)
--->
-
 ## 实验之前
 <!-- TODO * [Rust 基础介绍](docs/pre-lab/rust.md)  -->
 <!-- TODO * [操作系统背景知识](docs/pre-lab/os.md) -->
@@ -78,3 +71,8 @@
 ## 实验题
 * [实验一：中断](docs/lab-1/practice.md)
 * [实验二：内存分配](docs/lab-2/practice.md)
+
+## 开发笔记
+* [文档代码划分](docs/format/partition.md)
+* [文档格式规范](docs/format/doc.md)
+* [代码格式规范](docs/format/code.md)
