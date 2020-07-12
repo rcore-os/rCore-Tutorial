@@ -66,8 +66,9 @@ macro_rules! println {
     }
 }
 
-/// Quality of life debug macro
-/// Copy pasted from Rust's standard library
+/// 类似 [`std::dbg`] 宏
+///
+/// 可以实现方便的对变量输出的效果
 #[macro_export]
 #[allow(unused_macros)]
 macro_rules! dbg {
@@ -83,14 +84,15 @@ macro_rules! dbg {
             }
         }
     };
-    // Recursively evaluate argument
     ($val:expr,) => { $crate::dbg!($val) };
     ($($val:expr),+ $(,)?) => {
         ($($crate::dbg!($val)),+,)
     };
 }
 
-/// Dbg macro, but print in hex
+/// 类似 [`std::dbg`] 宏（16 进制输出）
+///
+/// 可以实现方便的对变量输出的效果（16 进制输出）
 #[macro_export]
 #[allow(unused_macros)]
 macro_rules! dbgx {
@@ -100,7 +102,6 @@ macro_rules! dbgx {
     ($val:expr) => {
         match $val {
             tmp => {
-                // Print in hex
                 println!("[{}:{}] {} = {:#x?}",
                     file!(), line!(), stringify!($val), &tmp);
                 tmp
