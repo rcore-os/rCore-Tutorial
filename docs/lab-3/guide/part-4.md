@@ -97,7 +97,7 @@ impl Mapping {
 
 后面，实现对页表的查找，并利用该函数实现对虚拟页号到物理页号的映射：
 
-{% label %}os/src/memory/mapping/mapping.rs: impl Mapping{% endlabel %}确定虚拟页到哪个
+{% label %}os/src/memory/mapping/mapping.rs: impl Mapping{% endlabel %}
 ```rust
 /// 找到给定虚拟页号的三级页表项
 ///
@@ -198,7 +198,7 @@ pub fn activate(&self) {
 
 ### MemorySet
 
-最后，我们需要把内核的每个段根据不同的属性写入上面的封装的 `Mapping` 中，并把它作为一个新的结构 `MemorySet` 给后面的线程的概念使用，这意味着：每个线程（到目前为止你可以大致理解为自己电脑中的同时工作的应用程序们）将会拥有一个 `MemorySet` ，其中存的将会是「它看到的虚拟内存空间分成的内存段」和「这些段中包含的虚拟页到物理页的映射」：
+最后，我们需要把内核的每个段根据不同的属性写入上面的封装的 `Mapping` 中，并把它作为一个新的结构 `MemorySet` 给后面的线程的概念使用，这意味着：每个线程（到目前为止你可以大致理解为自己电脑中的同时工作的应用程序们）将会拥有一个 `MemorySet`，其中存的将会是「它看到的虚拟内存空间分成的内存段」和「这些段中包含的虚拟页到物理页的映射」：
 
 {% label %}os/src/memory/mapping/memory_set.rs{% endlabel %}
 ```rust

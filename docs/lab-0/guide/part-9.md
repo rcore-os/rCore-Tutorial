@@ -11,9 +11,9 @@ OpenSBI 实际上不仅起到了 bootloader 的作用，还为我们提供了一
 void sbi_console_putchar(int ch)
 ```
 
-而实际的过程是这样的：运行在S态的OS通过 ecall 发起SBI调用请求，RISC-V CPU会从S态跳转到M态的OpenSBI固件，OpenSBI会检查OS发起的SBI调用的编号，如果编号在 0-8 之间，则进行处理，否则交由我们自己的中断处理程序处理（暂未实现）。想进一步了解编号在 0-8 之间的系统调用，请参考看 [OpenSBI 文档](https://github.com/riscv/riscv-sbi-doc/blob/master/riscv-sbi.adoc#function-listing-1)。
+而实际的过程是这样的：运行在 S 态的 OS 通过 ecall 发起 SBI 调用请求，RISC-V CPU 会从 S 态跳转到 M 态的 OpenSBI 固件，OpenSBI 会检查 OS 发起的 SBI 调用的编号，如果编号在 0-8 之间，则进行处理，否则交由我们自己的中断处理程序处理（暂未实现）。想进一步了解编号在 0-8 之间的系统调用，请参考看 [OpenSBI 文档](https://github.com/riscv/riscv-sbi-doc/blob/master/riscv-sbi.adoc#function-listing-1)。
 
-执行 `ecall` 前需要指定SBI调用的编号，传递参数。一般而言，`a7(x17)` 为SBI调用编号，`a0(x10)`、`a1(x11)` 和 `a2(x12)` 寄存器为SBI调用参数：
+执行 `ecall` 前需要指定 SBI 调用的编号，传递参数。一般而言，`a7(x17)` 为 SBI 调用编号，`a0(x10)`、`a1(x11)` 和 `a2(x12)` 寄存器为 SBI 调用参数：
 
 {% label %}os/src/sbi.rs{% endlabel %}
 ```rust
@@ -50,9 +50,7 @@ fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> usize {
 
 对于参数比较少且是基本数据类型的时候，我们从左到右使用寄存器 `a0` 到 `a7` 就可以完成参数的传递。具体规范可参考 [RISC-V Calling Convention](https://riscv.org/wp-content/uploads/2015/01/riscv-calling.pdf)。
 
-对于设置寄存器并执行汇编指令的代码编写，已经超出了 Rust 语言的基本描述能力。之前采用的`global_asm!` 方式在Rust代码中插入汇编代码，还不太方便实现Rust代码与汇编代码的互操作。为有效编写 Rust代码与汇编代码的互操作，我们还有另外一种**内联汇编（Inline Assembly）**方式， 可相对简单地完成诸如把 `u8` 类型的单个字符传给 `a0` 作为输入参数的编码需求。**内联汇编（Inline Assembly）**的具体规范请参考[书籍：Rust编程](https://kaisery.gitbooks.io/rust-book-chinese/content/content/Inline%20Assembly%20%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96.html)。
-
-<!-- TODO 进一步参考内联汇编 -->
+对于设置寄存器并执行汇编指令的代码编写，已经超出了 Rust 语言的基本描述能力。之前采用的 `global_asm!` 方式在Rust代码中插入汇编代码，还不太方便实现Rust代码与汇编代码的互操作。为有效编写 Rust代码与汇编代码的互操作，我们还有另外一种**内联汇编（Inline Assembly）**方式， 可相对简单地完成诸如把 `u8` 类型的单个字符传给 `a0` 作为输入参数的编码需求。**内联汇编（Inline Assembly）**的具体规范请参考书籍[《Rust 编程》](https://kaisery.gitbooks.io/rust-book-chinese/content/content/Inline%20Assembly%20%E5%86%85%E8%81%94%E6%B1%87%E7%BC%96.html)。
 
 输出部分，我们将结果保存到变量 `ret` 中，限制条件 `{x10}` 告诉编译器使用寄存器 `x10`（即 `a0` 寄存器），前面的 `=` 表明汇编代码会修改该寄存器并作为最后的返回值。
 

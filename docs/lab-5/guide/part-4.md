@@ -1,6 +1,6 @@
 ## 文件系统
 
-之前我们在加载 QEMU 的时候引入了一个磁盘镜像文件，这个文件的打包是由 [rcore-fs-fuse 工具](https://github.com/rcore-os/rcore-fs/tree/master/rcore-fs-fuse) 来完成的，它会根据不同的格式把目录的文件封装成到一个文件系统中，并把文件系统封装为一个磁盘镜像文件。然后我们把这个镜像文件像设备一样挂载在 QEMU 上，QEMU就把它模拟为一个块设备了。接下来我们需要让操作系统理解块设备里面的文件系统。
+之前我们在加载 QEMU 的时候引入了一个磁盘镜像文件，这个文件的打包是由 [rcore-fs-fuse 工具](https://github.com/rcore-os/rcore-fs/tree/master/rcore-fs-fuse) 来完成的，它会根据不同的格式把目录的文件封装成到一个文件系统中，并把文件系统封装为一个磁盘镜像文件。然后我们把这个镜像文件像设备一样挂载在 QEMU 上，QEMU 就把它模拟为一个块设备了。接下来我们需要让操作系统理解块设备里面的文件系统。
 
 ### Simple File System
 
