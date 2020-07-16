@@ -37,12 +37,12 @@ pub enum MapType {
 }
 
 /// 一个映射片段（对应旧 tutorial 的 `MemoryArea`）
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Segment {
     /// 映射类型
     pub map_type: MapType,
     /// 所映射的虚拟地址
-    pub page_range: Range<VirtualPageNumber>,
+    pub range: Range<VirtualAddress>,
     /// 权限标志
     pub flags: Flags,
 }
@@ -59,7 +59,7 @@ impl Segment {
     pub fn iter_mapped(&self) -> Option<impl Iterator<Item = PhysicalPageNumber>> {
         match self.map_type {
             // 线性映射可以直接将虚拟地址转换
-            MapType::Linear => Some(self.iter().map(PhysicalPageNumber::from)),
+            MapType::Linear => Some(self.page_range().into().iter()),
             // 按帧映射无法直接获得物理地址，需要分配
             MapType::Framed => None,
         }
@@ -107,7 +107,6 @@ pub fn find_entry(&mut self, vpn: VirtualPageNumber) -> MemoryResult<&mut PageTa
     // 这里不用 self.page_tables[0] 避免后面产生 borrow-check 冲突（我太菜了）
     let root_table: &mut PageTable = PhysicalAddress::from(self.root_ppn).deref_kernel();
     let mut entry = &mut root_table.entries[vpn.levels()[0]];
-    // println!("[{}] = {:x?}", vpn.levels()[0], entry);
     for vpn_slice in &vpn.levels()[1..] {
         if entry.is_empty() {
             // 如果页表不存在，则需要分配一个新的页表
@@ -147,34 +146,67 @@ fn map_one(
 ```rust
 /// 加入一段映射，可能会相应地分配物理页面
 ///
-/// - `init_data`
-///     复制一段内存区域来初始化新的内存区域，其长度必须等于 `segment` 的大小。
-///
-///
 /// 未被分配物理页面的虚拟页号暂时不会写入页表当中，它们会在发生 PageFault 后再建立页表项。
 pub fn map(
     &mut self,
     segment: &Segment,
+    init_data: Option<&[u8]>,
 ) -> MemoryResult<Vec<(VirtualPageNumber, FrameTracker)>> {
-    // segment 可能可以内部做好映射
-    if let Some(ppn_iter) = segment.iter_mapped() {
-        // segment 可以提供映射，那么直接用它得到 vpn 和 ppn 的迭代器
-        println!("map {:x?}", segment.page_range);
-        for (vpn, ppn) in segment.iter().zip(ppn_iter) {
-            self.map_one(vpn, ppn, segment.flags)?;
+    match segment.map_type {
+        // 线性映射，直接对虚拟地址进行转换
+        MapType::Linear => {
+            for vpn in segment.page_range().iter() {
+                self.map_one(vpn, vpn.into(), segment.flags | Flags::VALID)?;
+            }
+            // 拷贝数据
+            if let Some(data) = init_data {
+                unsafe {
+                    (&mut *slice_from_raw_parts_mut(segment.range.start.deref(), data.len()))
+                        .copy_from_slice(data);
+                }
+            }
+            Ok(Vec::new())
         }
-        Ok(vec![])
-    } else {
-        // 需要再分配帧进行映射
-        // 记录所有成功分配的页面映射
-        let mut allocated_pairs = vec![];
-        for vpn in segment.iter() {
-            let frame: FrameTracker = FRAME_ALLOCATOR.lock().alloc()?;
-            println!("map {:x?} -> {:x?}", vpn, frame.page_number());
-            self.map_one(vpn, frame.page_number(), segment.flags)?;
-            allocated_pairs.push((vpn, frame));
+        // 需要分配帧进行映射
+        MapType::Framed => {
+            // 记录所有成功分配的页面映射
+            let mut allocated_pairs = Vec::new();
+            for vpn in segment.page_range().iter() {
+                // 分配物理页面
+                let mut frame = FRAME_ALLOCATOR.lock().alloc()?;
+                // 映射，填充 0，记录
+                self.map_one(vpn, frame.page_number(), segment.flags | Flags::VALID)?;
+                frame.fill(0);
+                allocated_pairs.push((vpn, frame));
+            }
+
+            // 拷贝数据，注意页表尚未应用，无法直接从刚刚映射的虚拟地址访问，因此必须用物理地址 + 偏移来访问。
+            if let Some(data) = init_data {
+                // 对于 bss，参数会传入 data，但其长度为 0。我们已经在前面用 0 填充过页面了，因此跳过
+                if !data.is_empty() {
+                    for (vpn, frame) in allocated_pairs.iter_mut() {
+                        // 拷贝时必须考虑区间与整页不对齐的情况
+                        //    start（仅第一页时非零）
+                        //      |        stop（仅最后一页时非零）
+                        // 0    |---data---|          4096
+                        // |------------page------------|
+                        let page_address = VirtualAddress::from(*vpn);
+                        let start = if segment.range.start > page_address {
+                            segment.range.start - page_address
+                        } else {
+                            0
+                        };
+                        let stop = min(PAGE_SIZE, segment.range.end - page_address);
+                        // 计算来源和目标区间并进行拷贝
+                        let dst_slice = &mut frame[start..stop];
+                        let src_slice = &data[(page_address + start - segment.range.start)
+                            ..(page_address + stop - segment.range.start)];
+                        dst_slice.copy_from_slice(src_slice);
+                    }
+                }
+            }
+            Ok(allocated_pairs)
         }
-        Ok(allocated_pairs)
     }
 }
 ```
@@ -202,12 +234,14 @@ pub fn activate(&self) {
 
 {% label %}os/src/memory/mapping/memory_set.rs{% endlabel %}
 ```rust
-/// 一个线程所有关于内存空间管理的信息
+/// 一个进程所有关于内存空间管理的信息
 pub struct MemorySet {
     /// 维护页表和映射关系
     pub mapping: Mapping,
     /// 每个字段
     pub segments: Vec<Segment>,
+    /// 所有分配的物理页面映射信息
+    pub allocated_pairs: Vec<(VirtualPageNumber, FrameTracker)>,
 }
 ```
 
@@ -231,59 +265,48 @@ impl MemorySet {
             // .text 段，r-x
             Segment {
                 map_type: MapType::Linear,
-                page_range: Range::<VirtualAddress>::from(
-                    (text_start as usize)..(rodata_start as usize),
-                )
-                .into(),
-                flags: Flags::VALID | Flags::READABLE | Flags::EXECUTABLE,
+                range: Range::from((text_start as usize)..(rodata_start as usize)),
+                flags: Flags::READABLE | Flags::EXECUTABLE,
             },
             // .rodata 段，r--
             Segment {
                 map_type: MapType::Linear,
-                page_range: Range::<VirtualAddress>::from(
-                    (rodata_start as usize)..(data_start as usize),
-                )
-                .into(),
-                flags: Flags::VALID | Flags::READABLE,
+                range: Range::from((rodata_start as usize)..(data_start as usize)),
+                flags: Flags::READABLE,
             },
             // .data 段，rw-
             Segment {
                 map_type: MapType::Linear,
-                page_range: Range::<VirtualAddress>::from(
-                    (data_start as usize)..(bss_start as usize),
-                )
-                .into(),
-                flags: Flags::VALID | Flags::READABLE | Flags::WRITABLE,
+                range: Range::from((data_start as usize)..(bss_start as usize)),
+                flags: Flags::READABLE | Flags::WRITABLE,
             },
             // .bss 段，rw-
             Segment {
                 map_type: MapType::Linear,
-                page_range: Range::from(
-                    VirtualAddress::from(bss_start as usize)..*KERNEL_END_ADDRESS,
-                ),
-                flags: Flags::VALID | Flags::READABLE | Flags::WRITABLE,
+                range: Range::from(VirtualAddress::from(bss_start as usize)..*KERNEL_END_ADDRESS),
+                flags: Flags::READABLE | Flags::WRITABLE,
             },
             // 剩余内存空间，rw-
             Segment {
                 map_type: MapType::Linear,
-                page_range: Range::from(
-                    *KERNEL_END_ADDRESS..VirtualAddress::from(MEMORY_END_ADDRESS),
-                ),
-                flags: Flags::VALID | Flags::READABLE | Flags::WRITABLE,
+                range: Range::from(*KERNEL_END_ADDRESS..VirtualAddress::from(MEMORY_END_ADDRESS)),
+                flags: Flags::READABLE | Flags::WRITABLE,
             },
         ];
         let mut mapping = Mapping::new()?;
         // 准备保存所有新分配的物理页面
-        let mut allocated_pairs: Box<dyn Iterator<Item = (VirtualPageNumber, FrameTracker)>> =
-            Box::new(core::iter::empty());
+        let mut allocated_pairs = Vec::new();
 
         // 每个字段在页表中进行映射
         for segment in segments.iter() {
-            let new_pairs = mapping.map(segment)?;
             // 同时将新分配的映射关系保存到 allocated_pairs 中
-            allocated_pairs = Box::new(allocated_pairs.chain(new_pairs.into_iter()));
+            allocated_pairs.extend(mapping.map(segment, None)?);
         }
-        Ok(MemorySet { mapping, segments })
+        Ok(MemorySet {
+            mapping,
+            segments,
+            allocated_pairs,
+        })
     }
 
     /// 替换 `satp` 以激活页表
