@@ -6,14 +6,17 @@
 # 关于 RISC-V 下的汇编语言，可以参考 https://github.com/riscv/riscv-asm-manual/blob/master/riscv-asm.md
 # %hi 表示取 [12,32) 位，%lo 表示取 [0,12) 位
 
+.macro la_abs rd, symbol
+    lui \rd, %hi(\symbol)
+    addi \rd, \rd, %lo(\symbol)
+.endm
+
     .section .text.entry
     .globl _start
 # 目前 _start 的功能：将预留的栈空间写入 $sp，然后跳转至 rust_main
 _start:
     # 计算 boot_page_table 的物理页号
-    lui t0, %hi(boot_page_table)
-    li t1, 0xffffffff00000000
-    sub t0, t0, t1
+    la t0, boot_page_table
     srli t0, t0, 12
     # 8 << 60 是 satp 中使用 Sv39 模式的记号
     li t1, (8 << 60)
@@ -23,12 +26,10 @@ _start:
     sfence.vma
 
     # 加载栈地址
-    lui sp, %hi(boot_stack_top)
-    addi sp, sp, %lo(boot_stack_top)
+    la_abs sp, boot_stack_top
     # 跳转至 rust_main
     # 这里同时伴随 hart 和 dtb_pa 两个指针的传入（是 OpenSBI 帮我们完成的）
-    lui t0, %hi(rust_main)
-    addi t0, t0, %lo(rust_main)
+    la_abs t0, rust_main
     jr t0
 
     # 回忆：bss 段是 ELF 文件中只记录长度，而全部初始化为 0 的一段内存空间
