@@ -17,8 +17,8 @@
 # 目前 _start 的功能：将预留的栈空间写入 $sp，然后跳转至 rust_main
 _start:
     # 计算 boot_page_table 的物理页号
-    # la 会通过auipc和符号与pc的偏移得到相对地址。
-    # 这边pc在0x80000000附近，获得是boot_page_table的物理地址。
+    # la 会通过auipc和符号与pc的偏移得到相对地址
+    # 这边pc在0x80000000附近，获得是boot_page_table的物理地址
     la t0, boot_page_table
     srli t0, t0, 12
     # 8 << 60 是 satp 中使用 Sv39 模式的记号
