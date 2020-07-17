@@ -6,6 +6,7 @@
 # 关于 RISC-V 下的汇编语言，可以参考 https://github.com/riscv/riscv-asm-manual/blob/master/riscv-asm.md
 # %hi 表示取 [12,32) 位，%lo 表示取 [0,12) 位
 
+# 加载符号的绝对地址
 .macro la_abs rd, symbol
     lui \rd, %hi(\symbol)
     addi \rd, \rd, %lo(\symbol)
@@ -16,6 +17,8 @@
 # 目前 _start 的功能：将预留的栈空间写入 $sp，然后跳转至 rust_main
 _start:
     # 计算 boot_page_table 的物理页号
+    # la 会通过auipc和符号与pc的偏移得到相对地址。
+    # 这边pc在0x80000000附近，获得是boot_page_table的物理地址。
     la t0, boot_page_table
     srli t0, t0, 12
     # 8 << 60 是 satp 中使用 Sv39 模式的记号
@@ -26,6 +29,7 @@ _start:
     sfence.vma
 
     # 加载栈地址
+    # 这边因为是取绝对地址，获得的是boot_stack_top的虚拟地址
     la_abs sp, boot_stack_top
     # 跳转至 rust_main
     # 这里同时伴随 hart 和 dtb_pa 两个指针的传入（是 OpenSBI 帮我们完成的）
