@@ -1,5 +1,4 @@
 //! 一个线程中关于内存空间的所有信息 [`MemorySet`]
-//!
 
 use crate::memory::{
     address::*,

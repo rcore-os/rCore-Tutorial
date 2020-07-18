@@ -65,7 +65,7 @@ pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> 
             scause.cause()
         )),
     }
-    .unwrap_or_else(|msg| fault(msg, stval))
+    .unwrap_or_else(|msg| fault(msg, scause, stval))
 }
 
 /// 处理 ebreak 断点
@@ -109,13 +109,13 @@ fn supervisor_external(context: &mut Context) -> Result<*mut Context, String> {
 }
 
 /// 出现未能解决的异常，终止当前线程
-fn fault(msg: String, stval: usize) -> *mut Context {
+fn fault(msg: String, scause: Scause, stval: usize) -> *mut Context {
     println!(
         "{:#x?} terminated: {}",
         PROCESSOR.get().current_thread(),
         msg
     );
-    println!("stval: {:x}", stval);
+    println!("cause: {:?}, stval: {:x}", scause.cause(), stval);
 
     PROCESSOR.get().kill_current_thread();
     // 跳转到 PROCESSOR 调度的下一个线程

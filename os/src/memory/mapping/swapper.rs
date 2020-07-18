@@ -2,9 +2,8 @@
 
 use crate::memory::{frame::FrameTracker, *};
 use alloc::collections::VecDeque;
-use hashbrown::HashMap;
 
-/// 页面置换算法
+/// 管理一个线程所映射的页面的置换操作
 pub trait Swapper {
     /// 新建带有一个分配数量上限的置换器
     fn new(quota: usize) -> Self;
@@ -18,9 +17,6 @@ pub trait Swapper {
     /// 添加一组映射（不会在以达到分配上限时调用）
     fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker);
 
-    /// 找到某个页号对应的页面
-    fn find(&mut self, vpn: VirtualPageNumber) -> Option<&mut FrameTracker>;
-
     /// 只保留符合某种条件的条目（用于移除一段虚拟地址）
     fn retain(&mut self, predicate: impl Fn(&VirtualPageNumber) -> bool);
 }
@@ -29,10 +25,8 @@ pub type SwapperImpl = FIFOSwapper;
 
 /// 页面置换算法基础实现：FIFO
 pub struct FIFOSwapper {
-    /// 记录所有映射
-    entries: HashMap<VirtualPageNumber, FrameTracker>,
-    /// 记录映射添加的顺序
-    queue: VecDeque<VirtualPageNumber>,
+    /// 记录映射和添加的顺序
+    queue: VecDeque<(VirtualPageNumber, FrameTracker)>,
     /// 映射数量上限
     quota: usize,
 }
@@ -40,28 +34,20 @@ pub struct FIFOSwapper {
 impl Swapper for FIFOSwapper {
     fn new(quota: usize) -> Self {
         Self {
-            entries: HashMap::new(),
             queue: VecDeque::new(),
             quota,
         }
     }
     fn full(&self) -> bool {
-        self.entries.len() == self.quota
+        self.queue.len() == self.quota
     }
     fn pop(&mut self) -> Option<(VirtualPageNumber, FrameTracker)> {
-        self.queue
-            .pop_front()
-            .map(|vpn| (vpn, self.entries.remove(&vpn).unwrap()))
+        self.queue.pop_front()
     }
     fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker) {
-        self.queue.push_back(vpn);
-        self.entries.insert(vpn, frame);
-    }
-    fn find(&mut self, vpn: VirtualPageNumber) -> Option<&mut FrameTracker> {
-        self.entries.get_mut(&vpn)
+        self.queue.push_back((vpn, frame));
     }
     fn retain(&mut self, predicate: impl Fn(&VirtualPageNumber) -> bool) {
-        self.queue.retain(|vpn| predicate(vpn));
-        self.entries.retain(|vpn, _| predicate(vpn));
+        self.queue.retain(|(vpn, _)| predicate(vpn));
     }
 }

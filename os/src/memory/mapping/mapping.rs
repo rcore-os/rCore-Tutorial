@@ -25,7 +25,7 @@ pub struct Mapping {
     /// 根页表的物理页号
     root_ppn: PhysicalPageNumber,
     /// 所有分配的物理页面映射信息
-    swapper: SwapperImpl,
+    mapped_pairs: SwapperImpl,
     /// 被换出的页面存储在虚拟内存文件中的 Tracker
     swapped_pages: HashMap<VirtualPageNumber, SwapTracker>,
 }
@@ -50,7 +50,7 @@ impl Mapping {
         Ok(Mapping {
             page_tables: vec![root_table],
             root_ppn,
-            swapper: SwapperImpl::new(frame_quota),
+            mapped_pairs: SwapperImpl::new(frame_quota),
             swapped_pages: HashMap::new(),
         })
     }
@@ -72,13 +72,12 @@ impl Mapping {
                             .copy_from_slice(data);
                     }
                 }
-                Ok(())
             }
             // 需要分配帧进行映射
             MapType::Framed => {
                 for vpn in segment.page_range().iter() {
                     // 如果有初始化数据，找到相应的数据
-                    let page_data = if init_data.unwrap_or(&[0u8; 0]).is_empty() {
+                    let page_data = if init_data.is_none() || init_data.unwrap().is_empty() {
                         [0u8; PAGE_SIZE]
                     } else {
                         // 这里必须进行一些调整，因为传入的数据可能并非按照整页对齐
@@ -110,7 +109,7 @@ impl Mapping {
                     };
 
                     // 建立映射，先检查是否有配额来分配新的物理页面
-                    if !self.swapper.full() {
+                    if !self.mapped_pairs.full() {
                         // 有配额，分配新的物理页面
                         let mut frame = FRAME_ALLOCATOR.lock().alloc()?;
                         // 更新页表
@@ -118,7 +117,7 @@ impl Mapping {
                         // 写入数据
                         (*frame).copy_from_slice(&page_data);
                         // 保存
-                        self.swapper.push(vpn, frame);
+                        self.mapped_pairs.push(vpn, frame);
                     } else {
                         // 配额用完，改为在置换文件中分配一个页面
                         let swap_page = SwapTracker::new()?;
@@ -130,10 +129,9 @@ impl Mapping {
                         self.swapped_pages.insert(vpn, swap_page);
                     }
                 }
-
-                Ok(())
             }
         }
+        Ok(())
     }
 
     /// 移除一段映射
@@ -144,7 +142,7 @@ impl Mapping {
             // 从页表中清除项
             entry.clear();
         }
-        self.swapper
+        self.mapped_pairs
             .retain(|vpn| !segment.page_range().contains(*vpn));
         self.swapped_pages
             .retain(|vpn, _| !segment.page_range().contains(*vpn));
@@ -246,9 +244,9 @@ impl Mapping {
             .ok_or("stval page is not mapped")?;
         let page_data = swap_tracker.read();
 
-        if self.swapper.full() {
+        if self.mapped_pairs.full() {
             // 取出一个映射
-            let (popped_vpn, mut popped_frame) = self.swapper.pop().unwrap();
+            let (popped_vpn, mut popped_frame) = self.mapped_pairs.pop().unwrap();
             // print!("{:x?} -> {:x?}", popped_vpn, vpn);
             // 交换数据
             swap_tracker.write(&*popped_frame);
@@ -257,7 +255,7 @@ impl Mapping {
             self.invalidate_one(popped_vpn)?;
             self.remap_one(vpn, popped_frame.page_number())?;
             // 更新记录
-            self.swapper.push(vpn, popped_frame);
+            self.mapped_pairs.push(vpn, popped_frame);
             self.swapped_pages.insert(popped_vpn, swap_tracker);
         } else {
             // 添加新的映射
@@ -267,7 +265,7 @@ impl Mapping {
             // 更新映射
             self.remap_one(vpn, frame.page_number())?;
             // 更新记录
-            self.swapper.push(vpn, frame);
+            self.mapped_pairs.push(vpn, frame);
         }
         Ok(())
     }
