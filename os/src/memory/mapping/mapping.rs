@@ -47,8 +47,6 @@ impl Mapping {
     }
 
     /// 加入一段映射，可能会相应地分配物理页面
-    ///
-    /// 未被分配物理页面的虚拟页号暂时不会写入页表当中，它们会在发生 PageFault 后再建立页表项。
     pub fn map(
         &mut self,
         segment: &Segment,
