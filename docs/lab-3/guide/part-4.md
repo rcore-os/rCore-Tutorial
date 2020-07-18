@@ -116,7 +116,7 @@ pub fn find_entry(&mut self, vpn: VirtualPageNumber) -> MemoryResult<&mut PageTa
             let new_table = PageTableTracker::new(FRAME_ALLOCATOR.lock().alloc()?);
             let new_ppn = new_table.page_number();
             // 将新页表的页号写入当前的页表项
-            *entry = PageTableEntry::new(new_ppn, Flags::VALID);
+            *entry = PageTableEntry::new(Some(new_ppn), Flags::VALID);
             // 保存页表
             self.page_tables.push(new_table);
         }
@@ -207,7 +207,7 @@ pub fn map(&mut self, segment: &Segment, init_data: Option<&[u8]>) -> MemoryResu
                 // 写入数据
                 (*frame).copy_from_slice(&page_data);
                 // 保存
-                self.mapped_pairs.push((vpn, frame));
+                self.mapped_pairs.push_back((vpn, frame));
             }
         }
     }

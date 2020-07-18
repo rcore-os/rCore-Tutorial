@@ -34,6 +34,9 @@
 //!   允许使用 naked 函数，即编译器不在函数前后添加出入栈操作。
 //!   这允许我们在函数中间内联汇编使用 `ret` 提前结束，而不会导致栈出现异常
 #![feature(naked_functions)]
+//!
+//! - `#![feature(slice_fill)]`
+//!   允许将 slice 填充值
 #![feature(slice_fill)]
 
 #[macro_use]
