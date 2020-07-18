@@ -4,7 +4,6 @@
 use crate::memory::{
     address::*,
     config::*,
-    frame::FrameTracker,
     mapping::{Flags, MapType, Mapping, Segment},
     range::Range,
     MemoryResult,
@@ -21,8 +20,6 @@ pub struct MemorySet {
     pub mapping: Mapping,
     /// 每个字段
     pub segments: Vec<Segment>,
-    /// 所有分配的物理页面映射信息
-    pub allocated_pairs: Vec<(VirtualPageNumber, FrameTracker)>,
 }
 
 impl MemorySet {
@@ -75,24 +72,17 @@ impl MemorySet {
                 flags: Flags::READABLE | Flags::WRITABLE,
             },
         ];
-        let mut mapping = Mapping::new()?;
-        // 准备保存所有新分配的物理页面
-        let mut allocated_pairs = Vec::new();
+        let mut mapping = Mapping::new(KERNEL_PROCESS_FRAME_QUOTA)?;
 
         // 每个字段在页表中进行映射
         for segment in segments.iter() {
             // 同时将新分配的映射关系保存到 allocated_pairs 中
-            allocated_pairs.extend(mapping.map(segment, None)?);
+            mapping.map(segment, None)?;
         }
-        Ok(MemorySet {
-            mapping,
-            segments,
-            allocated_pairs,
-        })
+        Ok(MemorySet { mapping, segments })
     }
 
     /// 通过 elf 文件创建内存映射（不包括栈）
-    // todo: 有可能不同的字段出现在同一页？
     pub fn from_elf(file: &ElfFile, is_user: bool) -> MemoryResult<MemorySet> {
         // 建立带有内核映射的 MemorySet
         let mut memory_set = MemorySet::new_kernel()?;
@@ -140,9 +130,8 @@ impl MemorySet {
     pub fn add_segment(&mut self, segment: Segment, init_data: Option<&[u8]>) -> MemoryResult<()> {
         // 检测 segment 没有重合
         assert!(!self.overlap_with(segment.page_range()));
-        // 映射并将新分配的页面保存下来
-        self.allocated_pairs
-            .extend(self.mapping.map(&segment, init_data)?);
+        // 映射
+        self.mapping.map(&segment, init_data)?;
         self.segments.push(segment);
         Ok(())
     }
@@ -160,9 +149,6 @@ impl MemorySet {
         self.segments.remove(segment_index);
         // 移除映射
         self.mapping.unmap(segment);
-        // 释放页面（仅保留不属于 segment 的 vpn 和 frame）
-        self.allocated_pairs
-            .retain(|(vpn, _frame)| !segment.page_range().contains(*vpn));
         Ok(())
     }
 

@@ -67,22 +67,34 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     drivers::init(dtb_pa);
     fs::init();
 
-    start_kernel_thread();
-    start_kernel_thread();
-    start_user_thread("hello_world");
-    start_user_thread("notebook");
+    start_kernel_thread(test_page_fault as usize, None);
+    start_kernel_thread(test_page_fault as usize, None);
+    // start_user_thread("hello_world");
+    // start_user_thread("notebook");
 
     PROCESSOR.get().run()
 }
 
-fn start_kernel_thread() {
-    let process = Process::new_kernel().unwrap();
-    let thread = Thread::new(process, test as usize, None).unwrap();
-    PROCESSOR.get().add_thread(thread);
+/// 测试缺页异常处理
+///
+/// 为了便于体现效果，只给每个线程分配了很低的可用物理页面限额，见 [`KERNEL_PROCESS_FRAME_QUOTA`]
+///
+/// [`KERNEL_PROCESS_FRAME_QUOTA`]: memory::config::KERNEL_PROCESS_FRAME_QUOTA
+fn test_page_fault() {
+    let mut array = [0usize; 16 * 1024];
+    for i in 0..array.len() {
+        array[i] = i;
+    }
+    for i in 0..array.len() {
+        assert_eq!(i, array[i]);
+    }
+    println!("\x1b[32mtest passed\x1b[0m");
 }
 
-fn test() {
-    println!("hello");
+fn start_kernel_thread(entry_point: usize, arguments: Option<&[usize]>) {
+    let process = Process::new_kernel().unwrap();
+    let thread = Thread::new(process, entry_point, arguments).unwrap();
+    PROCESSOR.get().add_thread(thread);
 }
 
 fn start_user_thread(name: &str) {

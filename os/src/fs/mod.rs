@@ -17,12 +17,14 @@ mod config;
 mod inode_ext;
 mod stdin;
 mod stdout;
+mod swap;
 
 pub use config::*;
 pub use inode_ext::INodeExt;
 pub use rcore_fs::{dev::block_cache::BlockCache, vfs::*};
 pub use stdin::STDIN;
 pub use stdout::STDOUT;
+pub use swap::SwapTracker;
 
 lazy_static! {
     /// 根文件系统的根目录的 INode

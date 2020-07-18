@@ -28,6 +28,11 @@ pub const KERNEL_HEAP_SIZE: usize = 0x80_0000;
 /// 内核使用线性映射的偏移量
 pub const KERNEL_MAP_OFFSET: usize = 0xffff_ffff_0000_0000;
 
+/// 用户进程最多使用的物理页面数量
+pub const USER_PROCESS_FRAME_QUOTA: usize = 16;
+/// 内核进程最多使用的物理页面数量
+pub const KERNEL_PROCESS_FRAME_QUOTA: usize = 16;
+
 extern "C" {
     /// 由 `linker.ld` 指定的内核代码结束位置
     ///
