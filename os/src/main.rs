@@ -67,22 +67,20 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     drivers::init(dtb_pa);
     fs::init();
 
-    start_kernel_thread();
-    start_kernel_thread();
+    start_kernel_thread(test_kernel_thread as usize, Some(&[0usize]));
     start_user_thread("hello_world");
-    start_user_thread("notebook");
 
     PROCESSOR.get().run()
 }
 
-fn start_kernel_thread() {
-    let process = Process::new_kernel().unwrap();
-    let thread = Thread::new(process, test as usize, None).unwrap();
-    PROCESSOR.get().add_thread(thread);
+fn test_kernel_thread(id: usize) {
+    println!("hello from kernel thread {}", id);
 }
 
-fn test() {
-    println!("hello");
+fn start_kernel_thread(entry_point: usize, arguments: Option<&[usize]>) {
+    let process = Process::new_kernel().unwrap();
+    let thread = Thread::new(process, entry_point, arguments).unwrap();
+    PROCESSOR.get().add_thread(thread);
 }
 
 fn start_user_thread(name: &str) {

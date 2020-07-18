@@ -1,6 +1,7 @@
 //! 实现各种系统调用
 
 use super::*;
+use alloc::{format, string::String};
 
 pub const SYS_READ: usize = 63;
 pub const SYS_WRITE: usize = 64;
@@ -17,7 +18,7 @@ pub(super) enum SyscallResult {
 }
 
 /// 系统调用的总入口
-pub fn syscall_handler(context: &mut Context) -> *mut Context {
+pub fn syscall_handler(context: &mut Context) -> Result<*mut Context, String> {
     // 无论如何处理，一定会跳过当前的 ecall 指令
     context.sepc += 4;
 
@@ -28,10 +29,10 @@ pub fn syscall_handler(context: &mut Context) -> *mut Context {
         SYS_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
         SYS_WRITE => sys_write(args[0], args[1] as *mut u8, args[2]),
         SYS_EXIT => sys_exit(args[0]),
-        _ => unimplemented!(),
+        _ => return Err(format!("unimplemented syscall: {}", syscall_id)),
     };
 
-    match result {
+    Ok(match result {
         SyscallResult::Proceed(ret) => {
             // 将返回值放入 context 中
             context.x[10] = ret as usize;
@@ -49,5 +50,5 @@ pub fn syscall_handler(context: &mut Context) -> *mut Context {
             PROCESSOR.get().kill_current_thread();
             PROCESSOR.get().prepare_next_thread()
         }
-    }
+    })
 }
