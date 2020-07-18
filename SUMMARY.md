@@ -71,6 +71,7 @@
 ## 实验题
 * [实验一：中断](docs/lab-1/practice.md)
 * [实验二：内存分配](docs/lab-2/practice.md)
+* [实验四：线程](docs/lab-4/practice.md)
 
 ## 开发笔记
 * [文档代码划分](docs/format/partition.md)
