@@ -15,7 +15,7 @@
             "LyricZhao",
             "Tuyixiang"
         ],
-        id: location.pathname,
+        id: location.pathname.replace('/rCore-Tutorial-deploy', '').replace('.html', ''),
         distractionFreeMode: false
     });
     gitalk.render("gitalk-container");
