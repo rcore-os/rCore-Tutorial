@@ -26,6 +26,10 @@
 //! - `#![feature(panic_info_message)]`
 //!   panic! 时，获取其中的信息并打印
 #![feature(panic_info_message)]
+//!
+//! - `#![feature(slice_fill)]`
+//!   允许将 slice 填充值
+#![feature(slice_fill)]
 
 #[macro_use]
 mod console;
@@ -47,35 +51,10 @@ pub extern "C" fn rust_main() {
     interrupt::init();
     memory::init();
 
-    // 动态内存分配测试
-    use alloc::boxed::Box;
-    use alloc::vec::Vec;
-    let v = Box::new(5);
-    assert_eq!(*v, 5);
-    core::mem::drop(v);
+    let remap = memory::mapping::MemorySet::new_kernel().unwrap();
+    remap.activate();
 
-    let mut vec = Vec::new();
-    for i in 0..10000 {
-        vec.push(i);
-    }
-    assert_eq!(vec.len(), 10000);
-    for (i, value) in vec.into_iter().enumerate() {
-        assert_eq!(value, i);
-    }
-    println!("heap test passed");
+    println!("kernel remapped");
 
-    // 物理页分配
-    for _ in 0..2 {
-        let frame_0 = match memory::frame::FRAME_ALLOCATOR.lock().alloc() {
-            Result::Ok(frame_tracker) => frame_tracker,
-            Result::Err(err) => panic!("{}", err),
-        };
-        let frame_1 = match memory::frame::FRAME_ALLOCATOR.lock().alloc() {
-            Result::Ok(frame_tracker) => frame_tracker,
-            Result::Err(err) => panic!("{}", err),
-        };
-        println!("{} and {}", frame_0.address(), frame_1.address());
-    }
-
-    panic!("end of rust_main");
+    panic!()
 }
