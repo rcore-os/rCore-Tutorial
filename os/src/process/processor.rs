@@ -7,7 +7,7 @@ use lazy_static::*;
 
 lazy_static! {
     /// 全局的 [`Processor`]
-    pub static ref PROCESSOR: UnsafeWrapper<Processor> = Default::default();
+    pub static ref PROCESSOR: Lock<Processor> = Lock::new(Processor::default());
 }
 
 /// 线程调度和管理
@@ -112,14 +112,14 @@ impl Processor {
         if self.current_thread.is_none() {
             self.current_thread = Some(thread.clone());
         }
-        self.scheduler.add_thread(thread, 0);
+        self.scheduler.add_thread(thread);
     }
 
     /// 唤醒一个休眠线程
     pub fn wake_thread(&mut self, thread: Arc<Thread>) {
         thread.inner().sleeping = false;
         self.sleeping_threads.remove(&thread);
-        self.scheduler.add_thread(thread, 0);
+        self.scheduler.add_thread(thread);
     }
 
     /// 保存当前线程的 `Context`

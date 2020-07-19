@@ -29,6 +29,8 @@ pub struct ThreadInner {
     pub context: Option<Context>,
     /// 是否进入休眠
     pub sleeping: bool,
+    /// 是否已经结束
+    pub dead: bool,
     /// 打开的文件
     pub descriptors: Vec<Arc<dyn INode>>,
 }
@@ -84,6 +86,7 @@ impl Thread {
             inner: Mutex::new(ThreadInner {
                 context: Some(context),
                 sleeping: false,
+                dead: false,
                 descriptors: vec![STDIN.clone(), STDOUT.clone()],
             }),
         });

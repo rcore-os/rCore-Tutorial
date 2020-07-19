@@ -51,6 +51,7 @@
   * [线程的切换](docs/lab-4/guide/part-3.md)
   * [内核栈](docs/lab-4/guide/part-4.md)
   * [线程调度](docs/lab-4/guide/part-5.md)
+  * [线程的结束](docs/lab-4/guide/part-6.md)
   * [小结](docs/lab-4/guide/summary.md)
 * 实验指导五
   * [摘要](docs/lab-5/guide/intro.md)
@@ -73,6 +74,9 @@
 * [实验一：中断](docs/lab-1/practice.md)
 * [实验二：内存分配](docs/lab-2/practice.md)
 * [实验三：虚实地址转换](docs/lab-3/practice.md)
+* [实验四（上）：线程](docs/lab-4/practice-1.md)
+* [实验四（下）：线程调度](docs/lab-4/practice-2.md)
+* [实验六：系统调用](docs/lab-6/practice.md)
 
 ## 开发笔记
 * [文档代码划分](docs/format/partition.md)

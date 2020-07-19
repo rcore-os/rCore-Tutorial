@@ -75,7 +75,7 @@ impl Context {
         let mut context = Self::default();
 
         // 设置栈顶指针
-        context.set_sp(stack_top).set_ra(-1isize as usize);
+        context.set_sp(stack_top);
         // 设置初始参数
         if let Some(args) = arguments {
             context.set_arguments(args);

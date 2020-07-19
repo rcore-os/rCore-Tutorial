@@ -8,7 +8,7 @@
 ```rust
 lazy_static! {
     /// 全局的 [`Processor`]
-    pub static ref PROCESSOR: UnsafeWrapper<Processor> = Default::default();
+    pub static ref PROCESSOR: Lock<Processor> = Lock::new(Processor::default());
 }
 
 /// 线程调度和管理
@@ -16,12 +16,14 @@ lazy_static! {
 pub struct Processor {
     /// 当前正在执行的线程
     current_thread: Option<Arc<Thread>>,
-    /// 线程调度器，记录所有线程
+    /// 线程调度器，记录活跃线程
     scheduler: SchedulerImpl<Arc<Thread>>,
+    /// 保存休眠线程
+    sleeping_threads: HashSet<Arc<Thread>>,
 }
 ```
 
-注意到这里我们用了一个 `UnsafeWrapper`，这个东西相当于 Rust 提供的 `UnsafeCell`，或者 C 语言的指针：任何线程都可以随时从中获取一个 `&'static mut` 引用。由于在我们的设计中，**只有时钟中断（以及异常或未来的系统调用）时可以使用 `PROCESSOR`**，而在此过程中，操作系统是关闭时钟中断的。因此，这里使用 `UnsafeCell` 是安全的。
+注意到这里我们用了一个 `Lock`，它封装了 `spin::Mutex`，而在其基础上进一步关闭了中断。这是因为我们在内核线程中也有可能访问 `PROCESSOR`，但是此时我们不希望它被时钟打断，这样在中断处理中就无法访问 `PROCESSOR` 了，因为它已经被锁住。
 
 ### 调度器
 
@@ -33,14 +35,16 @@ pub struct Processor {
 ///
 /// 这里 `ThreadType` 就是 `Arc<Thread>`
 pub trait Scheduler<ThreadType: Clone + Eq>: Default {
+    /// 优先级的类型
+    type Priority;
     /// 向线程池中添加一个线程
-    fn add_thread<T>(&mut self, thread: ThreadType, priority: T);
+    fn add_thread(&mut self, thread: ThreadType);
     /// 获取下一个时间段应当执行的线程
     fn get_next(&mut self) -> Option<ThreadType>;
     /// 移除一个线程
-    fn remove_thread(&mut self, thread: ThreadType);
+    fn remove_thread(&mut self, thread: &ThreadType);
     /// 设置线程的优先级
-    fn set_priority<T>(&mut self, thread: ThreadType, priority: T);
+    fn set_priority(&mut self, thread: ThreadType, priority: Self::Priority);
 }
 ```
 
@@ -59,7 +63,10 @@ pub fn run(&mut self) -> ! {
         fn __restore(context: usize);
     }
     // 从 current_thread 中取出 Context
-    let context = self.current_thread().run();
+    if self.current_thread.is_none() {
+        panic!("no thread to run, shutting down");
+    }
+    let context = self.current_thread().prepare();
     // 从此将没有回头
     unsafe {
         __restore(context as usize);
@@ -80,20 +87,19 @@ pub extern "C" fn rust_main() -> ! {
     memory::init();
     interrupt::init();
 
-    // 新建一个带有内核映射的进程。需要执行的代码就在内核中
-    let process = Process::new_kernel().unwrap();
+    {
+        // 新建一个带有内核映射的进程。需要执行的代码就在内核中
+        let process = Process::new_kernel().unwrap();
 
-    for message in 0..8 {
-        let thread = Thread::new(
-            process.clone(),            // 使用同一个进程
-            sample_process as usize,    // 入口函数
-            Some(&[message]),           // 参数
-        ).unwrap();
-        PROCESSOR.get().add_thread(thread);
+        for message in 0..8 {
+            let thread = Thread::new(
+                process.clone(),            // 使用同一个进程
+                sample_process as usize,    // 入口函数
+                Some(&[message]),           // 参数
+            ).unwrap();
+            PROCESSOR.get().add_thread(thread);
+        }
     }
-
-    // 把多余的 process 引用丢弃掉
-    drop(process);
 
     PROCESSOR.get().run();
 }

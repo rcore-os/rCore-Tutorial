@@ -8,8 +8,6 @@ extern crate alloc;
 
 mod allocator;
 mod scheduler;
-mod unsafe_wrapper;
 
 pub use allocator::*;
 pub use scheduler::*;
-pub use unsafe_wrapper::{StaticUnsafeWrapper, UnsafeWrapper};

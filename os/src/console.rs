@@ -66,7 +66,7 @@ macro_rules! println {
     }
 }
 
-/// 类似 [`std::dbg`] 宏
+/// 类似 `std::dbg` 宏
 ///
 /// 可以实现方便的对变量输出的效果
 #[macro_export]
@@ -90,7 +90,7 @@ macro_rules! dbg {
     };
 }
 
-/// 类似 [`std::dbg`] 宏（16 进制输出）
+/// 类似 `std::dbg` 宏（16 进制输出）
 ///
 /// 可以实现方便的对变量输出的效果（16 进制输出）
 #[macro_export]
