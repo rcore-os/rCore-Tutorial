@@ -52,6 +52,7 @@ use alloc::sync::Arc;
 use fs::{INodeExt, ROOT_INODE};
 use memory::PhysicalAddress;
 use process::*;
+use spin::RwLock;
 use xmas_elf::ElfFile;
 
 // 汇编编写的程序入口，具体见该文件
@@ -69,8 +70,10 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
 
     {
         let mut processor = PROCESSOR.get();
+        let kernel_process = Process::new_kernel().unwrap();
         for i in 1..33usize {
-            processor.add_thread(create_kernel_process(
+            processor.add_thread(create_kernel_thread(
+                kernel_process.clone(),
                 test_kernel_thread as usize,
                 Some(&[i]),
             ));
@@ -85,9 +88,12 @@ fn test_kernel_thread(id: usize) {
 }
 
 /// 创建一个内核进程
-pub fn create_kernel_process(entry_point: usize, arguments: Option<&[usize]>) -> Arc<Thread> {
-    // 创建进程和线程
-    let process = Process::new_kernel().unwrap();
+pub fn create_kernel_thread(
+    process: Arc<RwLock<Process>>,
+    entry_point: usize,
+    arguments: Option<&[usize]>,
+) -> Arc<Thread> {
+    // 创建线程
     let thread = Thread::new(process, entry_point, arguments).unwrap();
     // 设置线程的返回地址为 kernel_thread_exit
     thread
