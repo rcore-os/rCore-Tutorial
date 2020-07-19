@@ -42,6 +42,7 @@
   * [修改内核](docs/lab-3/guide/part-2.md)
   * [实现页表](docs/lab-3/guide/part-3.md)
   * [实现内核重映射](docs/lab-3/guide/part-4.md)
+  * [页面置换*](docs/lab-3/guide/part-5.md)
   * [小结](docs/lab-3/guide/summary.md)
 * 实验指导四
   * [摘要](docs/lab-4/guide/intro.md)
@@ -71,6 +72,7 @@
 ## 实验题
 * [实验一：中断](docs/lab-1/practice.md)
 * [实验二：内存分配](docs/lab-2/practice.md)
+* [实验三：虚实地址转换](docs/lab-3/practice.md)
 
 ## 开发笔记
 * [文档代码划分](docs/format/partition.md)

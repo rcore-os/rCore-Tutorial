@@ -36,14 +36,33 @@ impl VirtualPageNumber {
 #[derive(Copy, Clone, Default)]
 pub struct PageTableEntry(usize);
 
+/// Sv39 页表项中标志位的位置
+const FLAG_RANGE: core::ops::Range<usize> = 0..8;
+/// Sv39 页表项中物理页号的位置
+const PAGE_NUMBER_RANGE: core::ops::Range<usize> = 10..54;
+
 impl PageTableEntry {
     /// 将相应页号和标志写入一个页表项
-    pub fn new(page_number: PhysicalPageNumber, flags: Flags) -> Self {
+    pub fn new(page_number: Option<PhysicalPageNumber>, mut flags: Flags) -> Self {
+        // 标志位中是否包含 Valid 取决于 page_number 是否为 Some
+        flags.set(Flags::VALID, page_number.is_some());
         Self(
             *0usize
-                .set_bits(..8, flags.bits() as usize)
-                .set_bits(10..54, page_number.into()),
+                .set_bits(FLAG_RANGE, flags.bits() as usize)
+                .set_bits(PAGE_NUMBER_RANGE, page_number.unwrap_or_default().into()),
         )
+    }
+    /// 设置物理页号，同时根据 ppn 是否为 Some 来设置 Valid 位
+    pub fn update_page_number(&mut self, ppn: Option<PhysicalPageNumber>) {
+        if let Some(ppn) = ppn {
+            self.0
+                .set_bits(FLAG_RANGE, (self.flags() | Flags::VALID).bits() as usize)
+                .set_bits(PAGE_NUMBER_RANGE, ppn.into());
+        } else {
+            self.0
+                .set_bits(FLAG_RANGE, (self.flags() - Flags::VALID).bits() as usize)
+                .set_bits(PAGE_NUMBER_RANGE, 0);
+        }
     }
     /// 获取页号
     pub fn page_number(&self) -> PhysicalPageNumber {
