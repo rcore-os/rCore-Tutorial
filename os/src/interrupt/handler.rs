@@ -5,7 +5,6 @@ use crate::kernel::syscall_handler;
 use crate::memory::*;
 use crate::process::PROCESSOR;
 use crate::sbi::console_getchar;
-use alloc::{format, string::String};
 use riscv::register::{
     scause::{Exception, Interrupt, Scause, Trap},
     sie, stvec,
@@ -45,7 +44,17 @@ pub fn init() {
 /// 具体的中断类型需要根据 scause 来推断，然后分别处理
 #[no_mangle]
 pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> *mut Context {
-    // 返回的 Context 必须位于放在内核栈顶
+    // 首先检查线程是否已经结束（内核线程会自己设置标记来结束自己）
+    {
+        let mut processor = PROCESSOR.get();
+        let current_thread = processor.current_thread();
+        if current_thread.as_ref().inner().dead {
+            println!("thread {} exit", current_thread.id);
+            processor.kill_current_thread();
+            return processor.prepare_next_thread();
+        }
+    }
+    // 根据中断类型来处理，返回的 Context 必须位于放在内核栈顶
     match scause.cause() {
         // 断点中断（ebreak）
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
@@ -56,32 +65,28 @@ pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> 
         // 外部中断（键盘输入）
         Trap::Interrupt(Interrupt::SupervisorExternal) => supervisor_external(context),
         // 其他情况，无法处理
-        _ => Err(format!(
-            "unimplemented interrupt type: {:x?}",
-            scause.cause()
-        )),
+        _ => fault("unimplemented interrupt type: {:x?}", scause, stval),
     }
-    .unwrap_or_else(|msg| fault(msg, scause, stval))
 }
 
 /// 处理 ebreak 断点
 ///
 /// 继续执行，其中 `sepc` 增加 2 字节，以跳过当前这条 `ebreak` 指令
-fn breakpoint(context: &mut Context) -> Result<*mut Context, String> {
+fn breakpoint(context: &mut Context) -> *mut Context {
     println!("Breakpoint at 0x{:x}", context.sepc);
     context.sepc += 2;
-    Ok(context)
+    context
 }
 
 /// 处理时钟中断
-fn supervisor_timer(context: &mut Context) -> Result<*mut Context, String> {
+fn supervisor_timer(context: &mut Context) -> *mut Context {
     timer::tick();
     PROCESSOR.get().park_current_thread(context);
-    Ok(PROCESSOR.get().prepare_next_thread())
+    PROCESSOR.get().prepare_next_thread()
 }
 
 /// 处理外部中断，只实现了键盘输入
-fn supervisor_external(context: &mut Context) -> Result<*mut Context, String> {
+fn supervisor_external(context: &mut Context) -> *mut Context {
     let mut c = console_getchar();
     if c <= 255 {
         if c == '\r' as usize {
@@ -89,11 +94,11 @@ fn supervisor_external(context: &mut Context) -> Result<*mut Context, String> {
         }
         STDIN.push(c as u8);
     }
-    Ok(context)
+    context
 }
 
 /// 出现未能解决的异常，终止当前线程
-fn fault(msg: String, scause: Scause, stval: usize) -> *mut Context {
+fn fault(msg: &str, scause: Scause, stval: usize) -> *mut Context {
     println!(
         "{:#x?} terminated: {}",
         PROCESSOR.get().current_thread(),

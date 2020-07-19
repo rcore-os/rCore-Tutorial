@@ -72,7 +72,7 @@
 * [实验一：中断](docs/lab-1/practice.md)
 * [实验二：内存分配](docs/lab-2/practice.md)
 * [实验四（上）：线程](docs/lab-4/practice-1.md)
-* [实验四（上）：线程](docs/lab-4/practice-2.md)
+* [实验四（下）：线程调度](docs/lab-4/practice-2.md)
 * [实验六：系统调用](docs/lab-6/practice.md)
 
 ## 开发笔记

@@ -7,7 +7,7 @@ use lazy_static::*;
 
 lazy_static! {
     /// 全局的 [`Processor`]
-    pub static ref PROCESSOR: UnsafeWrapper<Processor> = Default::default();
+    pub static ref PROCESSOR: Lock<Processor> = Lock::new(Processor::default());
 }
 
 /// 线程调度和管理
