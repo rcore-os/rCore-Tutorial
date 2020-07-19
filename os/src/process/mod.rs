@@ -1,8 +1,8 @@
 //! 管理进程 / 线程
 
 mod config;
-mod lock;
 mod kernel_stack;
+mod lock;
 #[allow(clippy::module_inception)]
 mod process;
 mod processor;
@@ -14,8 +14,8 @@ use alloc::{sync::Arc, vec, vec::Vec};
 use spin::{Mutex, RwLock};
 
 pub use config::*;
-pub use lock::Lock;
 pub use kernel_stack::KERNEL_STACK;
+pub use lock::Lock;
 pub use process::Process;
 pub use processor::PROCESSOR;
 pub use thread::Thread;
