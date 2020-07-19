@@ -13,7 +13,7 @@
 <!-- TODO: Normal Windows -->
 
 ## 安装 QEMU
-根据不同平台，我们分为下面 2 个部分来介绍。
+根据不同平台，我们分为下面 3 个部分来介绍。
 
 ### macOS
 在 macOS 中，我们可以直接打开命令行用 Homebrew 软件包管理器来安装最新版 QEMU 和其依赖：
@@ -23,7 +23,7 @@
 brew install qemu
 ```
 
-### Linux / Windows WSL
+### Linux
 在 Linux 中，由于很多软件包管理器的默认软件源中包含的 QEMU 版本过低，这里**推荐**的方式是我们自己手动从源码编译安装：
 
 {% label %}运行命令{% endlabel %}
@@ -57,7 +57,34 @@ sudo apt-get install qemu
 sudo yum install qemu
 ```
 
+### Windows WSL
+
+WSL（Windows Subsystem for Linux）是指Windows下构建linux环境（[Here](https://dowww.spencerwoo.com/)）。你可以在使用windows的同时，方便地进行linux下的开发，并且linux子系统上可以访问windows的文件系统。
+
+WSL2和Ubuntu环境安装步骤：
+
+- 升级Win10到最新版（ **Windows 10 版本 18917 或以后的<font color=red>内部</font>版本**）
+  - 如果不是win10专业版，可能需要手动更新，在微软官网上下载。否则，可能wsl功能不能启动。
+  - 在Powershell中输入`winver`查看**内部版本**号。
+- 「Windows 设置 > 更新和安全 > Windows 预览体验计划」处选择加入，Dev开发者模式
+- 打开**PowerShell**终端（**管理员**），输入：
+  - `Enable-WindowsOptionalFeature -Online -FeatureName Microsoft-Windows-Subsystem-Linux`
+  - `dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart`（启用windows功能：“适用于Linux的Windows子系统”）
+  - `dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart`（启用windows功能：“已安装的虚拟机平台”）
+  - ``wsl --set-default-version 2`（设置默认为WSL2，如果内部版本不够，这条命令会出错）
+    - 如果先装了Ubuntu，则：`wsl --set-version <Distro> 2`（`<Distro>`改为对应版本名）
+      - 比如：`wsl --set-version Ubuntu 2`
+- 在**微软商店**(Microsoft Store)中搜索`Ubutun`，安装第一个（或者你想要的版本）
+  - 在此处下载WSL2 Linux内核更新包：https://docs.microsoft.com/zh-cn/windows/wsl/wsl2-kernel
+  - 安装完成后，**打开**，进行**初始化**
+- 回到PowerShell，输入：`wsl --list --verbose`，查看Ubuntu的version是否为版本2。
+  - 注：`wsl --list --verbose`或`wsl -l -v`可以检查版本信息。
+- 结束。**WSL2和Ubuntu环境安装完毕**。
+
+在构建完成WSL2 + Ubuntu环境后，可以在Windows的Linux子系统下便捷地部署linux环境。请查看上文Linux环境搭建步骤。
+
 ### 完成后
+
 安装完成后可以用 `qemu-system-riscv64 --version` 命令检查是否成功安装我们需要的 RISC-V 64 虚拟器。
 
 ## 安装 Rust 工具链
