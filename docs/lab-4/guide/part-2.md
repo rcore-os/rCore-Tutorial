@@ -26,7 +26,7 @@
 
 首先我们稍作修改，添加一行 `mv sp, a0`。原本这里是读取之前存好的 `Context`，现在我们让其从 `a0` 中读取我们设计好的 `Context`。这样，我们可以直接在 Rust 代码中调用 `__restore(context)`。
 
-{% label %}os/src/interrupt.asm{% endlabel %}
+{% label %}os/src/interrupt/interrupt.asm{% endlabel %}
 ```asm
 __restore:
     mv      sp, a0  # 加入这一行
