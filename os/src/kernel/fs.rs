@@ -7,11 +7,12 @@ use core::slice::from_raw_parts_mut;
 ///
 /// 如果缓冲区暂无数据，返回 0；出现错误返回 -1
 pub(super) fn sys_read(fd: usize, buffer: *mut u8, size: usize) -> SyscallResult {
-    // 从进程中获取 inode，注意避免锁
-    let thread = PROCESSOR.get().current_thread();
-    let process = thread.process.read();
-    if let Some(inode) = process.descriptors.get(fd) {
+    // 从进程中获取 inode
+    let process = PROCESSOR.get().current_thread().process.clone();
+    if let Some(inode) = process.inner().descriptors.get(fd) {
+        // 从系统调用传入的参数生成缓冲区
         let buffer = unsafe { from_raw_parts_mut(buffer, size) };
+        // 尝试读取
         if let Ok(ret) = inode.read_at(0, buffer) {
             let ret = ret as isize;
             if ret > 0 {
@@ -27,11 +28,12 @@ pub(super) fn sys_read(fd: usize, buffer: *mut u8, size: usize) -> SyscallResult
 
 /// 将字符写入指定的文件
 pub(super) fn sys_write(fd: usize, buffer: *mut u8, size: usize) -> SyscallResult {
-    // 从进程中获取 inode，注意避免锁
-    let thread = PROCESSOR.get().current_thread();
-    let process = thread.process.read();
-    if let Some(inode) = process.descriptors.get(fd) {
+    // 从进程中获取 inode
+    let process = PROCESSOR.get().current_thread().process.clone();
+    if let Some(inode) = process.inner().descriptors.get(fd) {
+        // 从系统调用传入的参数生成缓冲区
         let buffer = unsafe { from_raw_parts_mut(buffer, size) };
+        // 尝试写入
         if let Ok(ret) = inode.write_at(0, buffer) {
             let ret = ret as isize;
             if ret >= 0 {

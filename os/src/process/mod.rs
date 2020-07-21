@@ -11,7 +11,7 @@ mod thread;
 use crate::interrupt::*;
 use crate::memory::*;
 use alloc::{sync::Arc, vec, vec::Vec};
-use spin::{Mutex, RwLock};
+use spin::Mutex;
 
 pub use config::*;
 pub use kernel_stack::KERNEL_STACK;

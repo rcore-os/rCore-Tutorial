@@ -55,7 +55,6 @@ use alloc::sync::Arc;
 use fs::{INodeExt, ROOT_INODE};
 use memory::PhysicalAddress;
 use process::*;
-use spin::RwLock;
 use xmas_elf::ElfFile;
 
 // 汇编编写的程序入口，具体见该文件
@@ -92,7 +91,7 @@ fn test_kernel_thread(id: usize) {
 
 /// 创建一个内核进程
 pub fn create_kernel_thread(
-    process: Arc<RwLock<Process>>,
+    process: Arc<Process>,
     entry_point: usize,
     arguments: Option<&[usize]>,
 ) -> Arc<Thread> {
