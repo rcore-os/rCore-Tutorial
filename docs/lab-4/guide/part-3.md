@@ -11,7 +11,6 @@
 > 注 2：在 Rust 中，引用 `&mut` 和指针 `*mut` 只是编译器的理解不同，其本质都是一个存储对象地址的寄存器。这里返回值使用指针而不是引用，是因为其指向的位置十分特殊，其生命周期在这里没有意义。
 
 {% label %}os/src/interrupt/handler.rs{% endlabel %}
-
 ```rust
 /// 中断的处理入口
 #[no_mangle]
@@ -43,7 +42,6 @@ fn supervisor_timer(context: &mut Context) -> *mut Context {
 （调度器 `scheduler` 会在后面的小节中讲解，我们只需要知道它能够返回下一个等待执行的线程。）
 
 {% label %}os/src/process/processor.rs: impl Processor{% endlabel %}
-
 ```rust
 /// 保存当前线程的 `Context`
 pub fn park_current_thread(&mut self, context: &Context) {
@@ -76,7 +74,6 @@ pub fn prepare_next_thread(&mut self) -> *mut Context {
 在线程切换时，我们需要保存前一个线程的 `Context`，为此我们实现 `Thread::park` 函数。
 
 {% label %}os/src/process/thread.rs: impl Thread{% endlabel %}
-
 ```rust
 /// 发生时钟中断后暂停线程，保存状态
 pub fn park(&self, context: Context) {
@@ -90,7 +87,6 @@ pub fn park(&self, context: Context) {
 然后，我们需要取出下一个线程的 `Context`，为此我们实现 `Thread::prepare`。不过这次需要注意的是，启动一个线程除了需要 `Context`，还需要切换页表。这个操作我们也在这个方法中完成。
 
 {% label %}os/src/process/thread.rs: impl Thread{% endlabel %}
-
 ```rust
 /// 准备执行一个线程
 ///

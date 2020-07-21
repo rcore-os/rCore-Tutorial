@@ -3,7 +3,6 @@
 调度器的算法有许多种，我们将它提取出一个 trait 作为接口
 
 {% label %}os/src/algorithm/src/scheduler/mod.rs{% endlabel %}
-
 ```rust
 /// 线程调度器
 ///
@@ -29,7 +28,6 @@ pub trait Scheduler<ThreadType: Clone + Eq>: Default {
 修改 `main.rs`，我们就可以跑起来多线程了。
 
 {% label %}os/src/main.rs{% endlabel %}
-
 ```rust
 pub extern "C" fn rust_main() -> ! {
     memory::init();
@@ -67,7 +65,6 @@ fn sample_process(message: usize) {
 运行一下，我们会得到类似的输出：
 
 {% label %}运行输出{% endlabel %}
-
 ```
 hello from kernel thread 7
 thread 7 exit

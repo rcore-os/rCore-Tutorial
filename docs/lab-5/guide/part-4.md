@@ -13,7 +13,6 @@
 这里我们用到了我们的老朋友 `lazy_static` 宏，将会在我们第一次使用 `ROOT_INODE` 时进行初始化，而初始化的方式是找到全部设备驱动中的第一个存储设备作为根目录。
 
 {% label %}os/src/fs/mod.rs{% endlabel %}
-
 ```rust
 lazy_static! {
     /// 根文件系统的根目录的 INode
@@ -41,7 +40,6 @@ lazy_static! {
 终于到了激动人心的测试环节了！我们首先在触发一下 `ROOT_INODE` 的初始化，然后尝试输出一下根目录的内容：
 
 {% label %}os/src/fs/mod.rs{% endlabel %}
-
 ```rust
 /// 打印某个目录的全部文件
 pub fn ls(path: &str) {
@@ -65,7 +63,6 @@ pub fn init() {
 最后在主函数中测试初始化，然后测试在另一个内核线程中创建个文件夹，而之所以在另一个线程中做是为了验证我们之前写驱动涉及到的页表的那些操作：
 
 {% label %}os/src/fs/mod.rs{% endlabel %}
-
 ```rust
 /// Rust 的入口函数
 ///
@@ -106,7 +103,6 @@ fn simple(id: usize) {
 `make run` 一下，你会得到类似的输出：
 
 {% label %}运行输出{% endlabel %}
-
 ```
 mod memory initialized
 mod interrupt initialized

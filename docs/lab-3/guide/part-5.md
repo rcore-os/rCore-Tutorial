@@ -26,7 +26,6 @@
 首先，我们要在磁盘中建立一个页面置换文件，来保存所有换出的页面。为了简化实现，我们直接在镜像中打包一个全是 0 的文件 `SWAP_FILE` 进去。
 
 {% label %}user/Makefile{% endlabel %}
-
 ```makefile
 # 编译、打包、格式转换、预留空间
 build: dependency
@@ -44,7 +43,6 @@ build: dependency
 我们希望每个进程的 `Mapping` 都能够像管理物理页面一样管理这些置换页面（在销毁时也能够释放它们），因此我们实现了一个类似于 `FrameTracker` 的 `SwapTracker`。它的具体实现会用到一些文件系统的操作，如果感兴趣可以参考源码。但简概括之：**`SwapTracker` 记录了一个被置换出物理内存的页面，并提供一些便捷的操作接口**。
 
 {% label %}os/src/fs/swap.rs{% endlabel %}
-
 ```rust
 /// 类似于 [`FrameTracker`]，相当于 `Box<置换文件中的一个页面>`
 ///
@@ -81,7 +79,6 @@ impl Drop for SwapTracker {
 然后，我们定义了一个置换算法的接口，并且实现了一个非常简单的置换算法，具体算法就不呈现了。
 
 {% label %}os/src/memory/mapping/swapper.rs{% endlabel %}
-
 ```rust
 /// 管理一个线程所映射的页面的置换操作
 pub trait Swapper {
@@ -105,7 +102,6 @@ pub trait Swapper {
 这里，`Swapper` 就替代了 `Mapping` 中的 `mapped_pairs: Vec<(VirtualPageNumber, FrameTracker)>` 的作用。因此，我们替换 `Mapping` 中的成员：
 
 {% label %}os/src/memory/mapping/mapping.rs{% endlabel %}
-
 ```rust
 /// 某个进程的内存映射关系
 pub struct Mapping {
@@ -123,7 +119,6 @@ pub struct Mapping {
 最后，让我们实现内存置换：遇到缺页异常，找到需要访问的页号、需要访问的页面数据，并置换出一个物理内存中的页号、页面数据，将二者进行交换
 
 {% label %}os/src/memory/mapping/mapping.rs{% endlabel %}
-
 ```rust
 impl Mapping {
     /// 处理缺页异常
@@ -167,7 +162,6 @@ impl Mapping {
 然后，令缺页异常调用上面的函数，就完成了页面置换的实现
 
 {% label %}os/src/interrupt/handler.rs{% endlabel %}
-
 ```rust
 /// 处理缺页异常
 ///

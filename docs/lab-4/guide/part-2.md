@@ -13,11 +13,10 @@
 思考：为什么线程即便与操作系统无关，也需要在内存中映射操作系统的内存空间呢？
 
 {% reveal %}
-
 > 当发生中断时，需要跳转到 `stvec` 所指向的中断处理过程。如果操作系统的内存不在页表之中，将无法处理中断。
 >
 > 当然，也不是所有操作系统的代码都需要被映射，但是为了实现简便，我们会为每个进程的页表映射全部操作系统的内存。而由于这些页表都标记为**内核权限**（即 `U` 位为 0），也不必担心用户线程可以随意访问。
-> {% endreveal %}
+{% endreveal %}
 
 ### 执行第一个线程
 
@@ -28,7 +27,6 @@
 首先我们稍作修改，添加一行 `mv sp, a0`。原本这里是读取之前存好的 `Context`，现在我们让其从 `a0` 中读取我们设计好的 `Context`。这样，我们可以直接在 Rust 代码中调用 `__restore(context)`。
 
 {% label %}os/src/interrupt/interrupt.asm{% endlabel %}
-
 ```asm
 __restore:
     mv      sp, a0  # 加入这一行
@@ -70,7 +68,6 @@ __restore:
 设计好 `Context` 之后，我们只需要将它应用到所有的寄存器上（即执行 `__restore`），就可以切换到第一个线程了。
 
 {% label %}os/src/main.rs: rust_main(){% endlabel %}
-
 ```rust
 extern "C" {
     fn __restore(context: usize);
@@ -93,7 +90,6 @@ unreachable!()
 现在，我们会在线程开始运行时开启中断，而在操作系统初始化的过程中是不应该有中断的。所以，我们删去之前设置「开启中断」的代码。
 
 {% label %}os/interrupt/timer.rs{% endlabel %}
-
 ```rust
 /// 初始化时钟中断
 ///
