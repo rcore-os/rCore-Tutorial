@@ -1,6 +1,75 @@
 //! 定义地址类型和地址常量
 //!
-//! 我们为虚拟地址和物理地址分别设立两种类型，利用编译器检查来防止混淆。
+//! 我们为虚拟地址和物理地址分别设立类型，利用编译器检查来防止混淆。
+//! 
+//! # 类型
+//! 
+//! - 虚拟地址 [`VirtualAddress`]
+//! - 物理地址 [`PhysicalAddress`]
+//! - 虚拟页号 [`VirtualPageNumber`]
+//! - 物理页号 [`PhysicalPageNumber`]
+//! 
+//! 四种类型均由一个 `usize` 来表示
+//! 
+//! # 类型转换
+//! 
+//! ### 与基本类型的转换
+//! 
+//! - 四种类型均实现了 `From<usize>` 和 `Into<usize>`
+//! - 虚拟地址实现了 `From<*const T>` 和 `From<*mut T>`，可以由一个指针生成
+//! 
+//! ### 虚拟 → 虚拟，物理 → 物理
+//! 
+//! - 页号至地址：直接乘以页面大小
+//! - 地址至页号：应当使用页号类型的 [`floor`] 和 [`ceil`] 静态方法来转换
+//! 
+//! [`floor`]: VirtualPageNumber::floor
+//! [`ceil`]: VirtualPageNumber::ceil
+//! 
+//! ### 虚拟 ↔ 物理
+//! 
+//! - **只能用于线性映射**，可以使用 `from` 或 `into` 来转换
+//! 
+//! # 其他方法
+//! 
+//! ### 虚拟地址 `VirtualAddress`
+//! 
+//! ```rust
+//! /// 通过地址得到任何类型变量的引用。没有类型检查所以要格外注意
+//! pub fn deref<T>(self) -> &'static mut T { ... }
+//! /// 得到其页内偏移，即低 12 位
+//! pub fn page_offset(self) -> usize { ... }
+//! ```
+//! 
+//! ### 物理地址 `PhysicalAddress`
+//! 
+//! ```rust
+//! /// 按照内核线性映射后，得到变量引用
+//! pub fn deref_kernel<T>(self) -> &'static mut T { ... }
+//! /// 得到其页内偏移，即低 12 位
+//! pub fn page_offset(self) -> usize { ... }
+//! ```
+//! 
+//! ### 虚拟页号 `VirtualPageNumber`
+//! 
+//! ```rust
+//! /// 通过地址得到页面所对应的一段内存
+//! pub fn deref(self) -> &'static mut [u8; PAGE_SIZE] { ... }
+//! /// 得到一至三级页号
+//! pub fn levels(self) -> [usize; 3] { ... }
+//! ```
+//! 
+//! ### 物理页号 `PhysicalPageNumber`
+//! 
+//! ```rust
+//! /// 按照内核线性映射后得到页面对应的一段内存
+//! pub fn deref_kernel(self) -> &'static mut [u8; PAGE_SIZE] { ... }
+//! ```
+//! 
+//! # 基本运算
+//! 
+//! - 四种类型都可以直接与 `usize` 进行加减，返回结果为原本类型
+//! - 四种类型都可以与自己类型进行加减，返回结果为 `usize` 
 
 use super::config::{KERNEL_MAP_OFFSET, PAGE_SIZE};
 use bit_field::BitField;
@@ -70,7 +139,7 @@ impl VirtualAddress {
         unsafe { &mut *(self.0 as *mut T) }
     }
     /// 取得页内偏移
-    pub fn page_offset(&self) -> usize {
+    pub fn page_offset(self) -> usize {
         self.0 % PAGE_SIZE
     }
 }
@@ -80,7 +149,7 @@ impl PhysicalAddress {
         VirtualAddress::from(self).deref()
     }
     /// 取得页内偏移
-    pub fn page_offset(&self) -> usize {
+    pub fn page_offset(self) -> usize {
         self.0 % PAGE_SIZE
     }
 }
