@@ -59,52 +59,44 @@ sudo yum install qemu
 
 ### Windows WSL 2
 
-[WSL](https://docs.microsoft.com/zh-cn/windows/wsl/)（Windows Subsystem for Linux）是指 Windows 下构建 Linux 环境。你可以在使用 Windows 的同时，方便地进行 Linux 下的开发，并且 Linux 子系统上可以访问 Windows 的文件系统。但是，WSL 在安装rust时会出现环境配置方面的问题，因此这里我们采用新版的 WSL，即 WSL 2。
+[WSL](https://docs.microsoft.com/zh-cn/windows/wsl/)（Windows Subsystem for Linux）是指 Windows 下构建 Linux 环境。你可以在使用 Windows 的同时，方便地进行 Linux 下的开发，并且 Linux 子系统上可以访问 Windows 的文件系统。但是，WSL 在安装 Rust 时会出现环境配置方面的问题，因此这里我们采用新版的 WSL，即 WSL 2。
 
 WSL 2 和 Ubuntu 环境安装步骤：
 
-- 升级 Windows 10 到最新版（ **Windows 10 版本 18917 或以后的<font color=red>内部</font>版本**）
-  - 如果不是 Windows 10 专业版，可能需要手动更新，在微软官网上下载。否则，可能 WSL 功能不能启动。
-  - 在 Powershell 中输入 `winver` 查看**内部版本**号。
-- 「 Windows 设置 > 更新和安全 > Windows 预览体验计划」处选择加入，Dev 开发者模式
-- 打开 **PowerShell** 终端（**管理员**），输入：
+- 升级 Windows 10 到最新版（Windows 10 版本 18917 或以后的内部版本）
+  - 如果不是 Windows 10 专业版，可能需要手动更新，在微软官网上下载。否则，可能 WSL 功能不能启动
+  - 在 PowerShell 中输入 `winver` 查看**内部版本**号
+- 「Windows 设置 > 更新和安全 > Windows 预览体验计划」处选择加入，Dev 开发者模式
+- 打开 PowerShell 终端（**管理员身份**），输入：
 
 {% label %}运行命令{% endlabel %}
-
 ```powershell
-# 启用windows功能：“适用于Linux的Windows子系统”
+# 启用 Windows 功能：“适用于 Linux 的 Windows 子系统”
 dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
 
-# 启用windows功能：“已安装的虚拟机平台”
+# 启用 Windows 功能：“已安装的虚拟机平台”
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
 
-# 设置默认为WSL2，如果内部版本不够，这条命令会出错
+# <Distro> 改为对应版本名，比如：`wsl --set-version Ubuntu 2`
+wsl --set-version <Distro> 2
+
+# 设置默认为 WSL 2，如果 Windows 版本不够，这条命令会出错
 wsl --set-default-version 2
 ```
 
-- 如果先装了 Ubuntu，则运行：
-
-{% label %}运行命令{% endlabel %}
-
-```powershell
-# <Distro>改为对应版本名，比如： `wsl --set-version Ubuntu 2`
-wsl --set-version <Distro> 2
-```
-
-- 在**微软商店**（Microsoft Store）中搜索 Ubuntu，安装第一个（或者你想要的版本）
-  - 在 [此处](https://docs.microsoft.com/zh-cn/windows/wsl/wsl2-kernel) 下载 WSL 2 的 Linux 内核更新包
-  - 安装完成后，打开 Ubuntu，进行**初始化**
+- 在微软商店（Microsoft Store）中搜索 Ubuntu，安装第一个（或者你想要的版本）
+  - 在[此处](https://docs.microsoft.com/zh-cn/windows/wsl/wsl2-kernel)下载 WSL 2 的 Linux 内核更新包
+  - 安装完成后，打开 Ubuntu，进行初始化
 - 回到 PowerShell 终端，输入：
 
 {% label %}运行命令{% endlabel %}
-
 ```powershell
-# 查看Ubuntu的version是否为版本2
-# 简写为 `wsl -l -v`
+# 查看 WSL 的版本是否为 2
+# 可简写为 `wsl -l -v`
 wsl --list --verbose
 ```
 
-- 若得到的版本信息正确，结束。**WSL 2 和 Ubuntu 环境安装完毕**。
+- 若得到的版本信息正确，结束。WSL 2 和 Ubuntu 环境安装完毕。
 
 在构建完成 WSL 2 + Ubuntu 环境后，可以在 Windows 的 Linux 子系统下便捷地部署 Linux 环境。请查看上文 Linux 环境搭建步骤。
 

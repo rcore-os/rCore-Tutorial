@@ -21,7 +21,7 @@ impl<T> Lock<T> {
     }
 
     /// 获得上锁的对象
-    pub fn get<'a>(&'a self) -> LockGuard<'a, T> {
+    pub fn get(&self) -> LockGuard<'_, T> {
         let sstatus: usize;
         unsafe {
             llvm_asm!("csrrci $0, sstatus, 1 << 1" : "=r"(sstatus) ::: "volatile");
