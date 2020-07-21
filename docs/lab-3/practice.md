@@ -7,7 +7,7 @@
 
 ### 实验题
 
-1.  原理：在 `os/src/entry.asm` 中，`boot_page_table` 的意义是什么？当执行 `jal rust_main` 时，不考虑缓存，硬件通过哪些地址找到了 `rust_main` 的第一条指令？
+1.  原理：在 `os/src/entry.asm` 中，`boot_page_table` 的意义是什么？当跳转执行 `rust_main` 时，不考虑缓存，硬件通过哪些地址找到了 `rust_main` 的第一条指令？
 
     {% reveal %}
 > 1.  `boot_page_table` 是一个用二进制表示的根页表，其中包含两个 1GB 大页，分别是将虚拟地址 `0x8000_0000` 至 `0xc000_0000` 映射到物理地址 `0x8000_0000` 至 `0xc000_0000`，以及将虚拟地址 `0xffff_ffff_8000_0000` 至 `0xffff_ffff_c000_0000` 映射到物理地址 `0x8000_0000` 至 `0xc000_0000`。
