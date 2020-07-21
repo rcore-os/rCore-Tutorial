@@ -61,16 +61,10 @@ impl Thread {
         arguments: Option<&[usize]>,
     ) -> MemoryResult<Arc<Thread>> {
         // 让所属进程分配并映射一段空间，作为线程的栈
-        let stack = process
-            .alloc_page_range(STACK_SIZE, Flags::READABLE | Flags::WRITABLE)?;
+        let stack = process.alloc_page_range(STACK_SIZE, Flags::READABLE | Flags::WRITABLE)?;
 
         // 构建线程的 Context
-        let context = Context::new(
-            stack.end.into(),
-            entry_point,
-            arguments,
-            process.is_user,
-        );
+        let context = Context::new(stack.end.into(), entry_point, arguments, process.is_user);
 
         // 打包成线程
         let thread = Arc::new(Thread {

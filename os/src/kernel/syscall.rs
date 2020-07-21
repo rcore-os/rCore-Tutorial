@@ -44,13 +44,13 @@ pub fn syscall_handler(context: &mut Context) -> *mut Context {
             // 将返回值放入 context 中
             context.x[10] = ret as usize;
             // 保存 context，准备下一个线程
-            PROCESSOR.get().park_current_thread(context);
-            PROCESSOR.get().prepare_next_thread()
+            PROCESSOR.lock().park_current_thread(context);
+            PROCESSOR.lock().prepare_next_thread()
         }
         SyscallResult::Kill => {
             // 终止，跳转到 PROCESSOR 调度的下一个线程
-            PROCESSOR.get().kill_current_thread();
-            PROCESSOR.get().prepare_next_thread()
+            PROCESSOR.lock().kill_current_thread();
+            PROCESSOR.lock().prepare_next_thread()
         }
     }
 }

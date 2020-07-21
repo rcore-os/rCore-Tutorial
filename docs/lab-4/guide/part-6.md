@@ -1,32 +1,89 @@
-## 线程的结束
+## 调度器
 
-### 现有问题
+调度器的算法有许多种，我们将它提取出一个 trait 作为接口
 
-当内核线程终止时，会发生什么？如果我们按照实验指导中的实现，应该会观察到：内核线程在运行完成后触发了 `Exception::InstructionPageFault` 而终止，其中访问的的地址 `stval = 0`。
+{% label %}os/src/algorithm/src/scheduler/mod.rs{% endlabel %}
 
-这是因为内核线程在执行完 `entry_point` 所指向的函数后会返回到 `ra` 指向的地址，而我们没有为其赋初值（初值为 0）。此时，程序就会尝试跳转到 `0x0` 地址，而显然它是不存在的。
-
-### 解决办法
-
-很自然的，我们希望能够让内核线程在结束时触发一个友善的中断（而不是一个看上去像是错误的缺页异常），然后被操作系统释放。我们可能会想到系统调用，但很可惜我们无法使用它，因为系统调用的本质是一个环境调用 `ecall`，而在内核线程（内核态）中进行的环境调用是用来与 M 态通信的。我们之前实现的 SBI 调用就是使用的 S 态 `ecall`。
-
-因此，我们设计一个折衷的解决办法：内核线程将自己标记为“已结束”，同时触发一个普通的异常 `ebreak`。此时操作系统观察到线程的标记，便将其终止。
-
-{% label %}os/src/main.rs{% endlabel %}
 ```rust
-/// 内核线程需要调用这个函数来退出
-fn kernel_thread_exit() {
-    // 当前线程标记为结束
-    PROCESSOR.get().current_thread().as_ref().inner().dead = true;
-    // 制造一个中断来交给操作系统处理
-    unsafe { llvm_asm!("ebreak" :::: "volatile") };
+/// 线程调度器
+///
+/// 这里 `ThreadType` 就是 `Arc<Thread>`
+pub trait Scheduler<ThreadType: Clone + Eq>: Default {
+    /// 优先级的类型
+    type Priority;
+    /// 向线程池中添加一个线程
+    fn add_thread(&mut self, thread: ThreadType);
+    /// 获取下一个时间段应当执行的线程
+    fn get_next(&mut self) -> Option<ThreadType>;
+    /// 移除一个线程
+    fn remove_thread(&mut self, thread: &ThreadType);
+    /// 设置线程的优先级
+    fn set_priority(&mut self, thread: ThreadType, priority: Self::Priority);
 }
 ```
 
-然后，我们将这个函数作为内核线程的 `ra`，使得它执行的函数完成后便执行 `kernel_thread_exit()`
+具体的算法就不在此展开了，我们可以参照目录 `os/src/algorithm/src/scheduler` 下的一些样例。
+
+### 运行！
+
+修改 `main.rs`，我们就可以跑起来多线程了。
 
 {% label %}os/src/main.rs{% endlabel %}
+
 ```rust
-// 设置线程的返回地址为 kernel_thread_exit
-thread.as_ref().inner().context.as_mut().unwrap().set_ra(kernel_thread_exit as usize);
+pub extern "C" fn rust_main() -> ! {
+    memory::init();
+    interrupt::init();
+
+    {
+        let mut processor = PROCESSOR.lock();
+        // 创建一个内核进程
+        let kernel_process = Process::new_kernel().unwrap();
+        // 为这个进程创建多个线程，并设置入口均为 sample_process，而参数不同
+        for i in 1..9usize {
+            processor.add_thread(create_kernel_thread(
+                kernel_process.clone(),
+                sample_process as usize,
+                Some(&[i]),
+            ));
+        }
+    }
+
+    extern "C" {
+        fn __restore(context: usize);
+    }
+    // 获取第一个线程的 Context
+    let context = PROCESSOR.lock().prepare_next_thread();
+    // 启动第一个线程
+    unsafe { __restore(context as usize) };
+    unreachable!()
+}
+
+fn sample_process(message: usize) {
+    println!("hello from kernel thread {}", id);
+}
+```
+
+运行一下，我们会得到类似的输出：
+
+{% label %}运行输出{% endlabel %}
+
+```
+hello from kernel thread 7
+thread 7 exit
+hello from kernel thread 6
+thread 6 exit
+hello from kernel thread 5
+thread 5 exit
+hello from kernel thread 4
+thread 4 exit
+hello from kernel thread 3
+thread 3 exit
+hello from kernel thread 2
+thread 2 exit
+hello from kernel thread 1
+thread 1 exit
+hello from kernel thread 8
+thread 8 exit
+src/process/processor.rs:87: 'all threads terminated, shutting down'
 ```

@@ -21,7 +21,7 @@ impl<T> Lock<T> {
     }
 
     /// 获得上锁的对象
-    pub fn get(&self) -> LockGuard<'_, T> {
+    pub fn lock(&self) -> LockGuard<'_, T> {
         let sstatus: usize;
         unsafe {
             llvm_asm!("csrrci $0, sstatus, 1 << 1" : "=r"(sstatus) ::: "volatile");
@@ -30,16 +30,6 @@ impl<T> Lock<T> {
             guard: Some(self.0.lock()),
             sstatus,
         }
-    }
-
-    /// 不安全：获得不上锁的对象引用
-    ///
-    /// 这个只用于 [`PROCESSOR::run()`] 时使用
-    ///
-    /// [`PROCESSOR::run()`]: crate::process::processor::Processor::run
-    pub unsafe fn unsafe_get(&self) -> &'static mut T {
-        let addr = &mut *self.0.lock() as *mut T;
-        &mut *addr
     }
 }
 
