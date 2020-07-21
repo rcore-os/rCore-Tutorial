@@ -71,8 +71,6 @@ __interrupt:
     # 将本来的栈地址 sp（即 x2）保存
     csrr    x1, sscratch
     SAVE    x1, 2
-    SAVE    x3, 3
-    SAVE    x4, 4
 
     # ...
 ```
