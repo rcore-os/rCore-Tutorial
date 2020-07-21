@@ -10,6 +10,22 @@ lazy_static! {
     pub static ref PROCESSOR: Lock<Processor> = Lock::new(Processor::default());
 }
 
+lazy_static! {
+    /// 空闲线程：当所有线程进入休眠时，切换到这个线程——它什么都不做，只会等待下一次中断
+    static ref IDLE_THREAD: Arc<Thread> = Thread::new(
+        Process::new_kernel().unwrap(),
+        wait_for_interrupt as usize,
+        None,
+    ).unwrap();
+}
+
+/// 不断让 CPU 进入休眠等待下一次中断
+unsafe fn wait_for_interrupt() {
+    loop {
+        llvm_asm!("wfi" :::: "volatile");
+    }
+}
+
 /// 线程调度和管理
 ///
 /// 休眠线程会从调度器中移除，单独保存。在它们被唤醒之前，不会被调度器安排。
@@ -87,22 +103,21 @@ impl Processor {
 
     /// 激活下一个线程的 `Context`
     pub fn prepare_next_thread(&mut self) -> *mut Context {
-        loop {
-            // 向调度器询问下一个线程
-            if let Some(next_thread) = self.scheduler.get_next() {
-                // 准备下一个线程
-                let context = next_thread.prepare();
-                self.current_thread = Some(next_thread);
-                return context;
+        // 向调度器询问下一个线程
+        if let Some(next_thread) = self.scheduler.get_next() {
+            // 准备下一个线程
+            let context = next_thread.prepare();
+            self.current_thread = Some(next_thread);
+            context
+        } else {
+            // 没有活跃线程
+            if self.sleeping_threads.is_empty() {
+                // 也没有休眠线程，则退出
+                panic!("all threads terminated, shutting down");
             } else {
-                // 没有活跃线程
-                if self.sleeping_threads.is_empty() {
-                    // 也没有休眠线程，则退出
-                    panic!("all threads terminated, shutting down");
-                } else {
-                    // 有休眠线程，则等待中断
-                    crate::interrupt::wait_for_interrupt();
-                }
+                // 有休眠线程，则等待中断
+                self.current_thread = Some(IDLE_THREAD.clone());
+                IDLE_THREAD.prepare()
             }
         }
     }

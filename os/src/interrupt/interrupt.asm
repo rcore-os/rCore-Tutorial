@@ -80,7 +80,7 @@ __restore:
     csrw    sstatus, t0
     csrw    sepc, t1
     # 将内核栈地址写入 sscratch
-    addi    t0, sp, 36*8
+    addi    t0, sp, CONTEXT_SIZE * REG_SIZE
     csrw    sscratch, t0
 
     # 恢复通用寄存器

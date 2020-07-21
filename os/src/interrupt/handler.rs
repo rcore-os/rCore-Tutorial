@@ -65,7 +65,7 @@ pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> 
         // 外部中断（键盘输入）
         Trap::Interrupt(Interrupt::SupervisorExternal) => supervisor_external(context),
         // 其他情况，无法处理
-        _ => fault("unimplemented interrupt type: {:x?}", scause, stval),
+        _ => fault("unimplemented interrupt type", scause, stval),
     }
 }
 

@@ -1,6 +1,7 @@
 //! 进程 [`Process`]
 
 use super::*;
+use crate::fs::*;
 use xmas_elf::ElfFile;
 
 /// 进程的信息
@@ -9,6 +10,8 @@ pub struct Process {
     pub is_user: bool,
     /// 进程中的线程公用页表 / 内存映射
     pub memory_set: MemorySet,
+    /// 打开的文件描述符
+    pub descriptors: Vec<Arc<dyn INode>>,
 }
 
 #[allow(unused)]
@@ -18,6 +21,7 @@ impl Process {
         Ok(Arc::new(RwLock::new(Self {
             is_user: false,
             memory_set: MemorySet::new_kernel()?,
+            descriptors: vec![STDIN.clone(), STDOUT.clone()],
         })))
     }
 
@@ -26,6 +30,7 @@ impl Process {
         Ok(Arc::new(RwLock::new(Self {
             is_user,
             memory_set: MemorySet::from_elf(file, is_user)?,
+            descriptors: vec![STDIN.clone(), STDOUT.clone()],
         })))
     }
 

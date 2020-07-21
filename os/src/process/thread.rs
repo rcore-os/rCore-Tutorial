@@ -1,12 +1,12 @@
 //! 线程 [`Thread`]
 
 use super::*;
-use crate::fs::*;
 use core::hash::{Hash, Hasher};
 
 /// 线程 ID 使用 `isize`，可以用负数表示错误
 pub type ThreadID = isize;
 
+/// 线程计数，用于设置线程 ID
 static mut THREAD_COUNTER: ThreadID = 0;
 
 /// 线程的信息
@@ -31,8 +31,6 @@ pub struct ThreadInner {
     pub sleeping: bool,
     /// 是否已经结束
     pub dead: bool,
-    /// 打开的文件
-    pub descriptors: Vec<Arc<dyn INode>>,
 }
 
 impl Thread {
@@ -87,7 +85,6 @@ impl Thread {
                 context: Some(context),
                 sleeping: false,
                 dead: false,
-                descriptors: vec![STDIN.clone(), STDOUT.clone()],
             }),
         });
 
