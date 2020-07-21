@@ -168,36 +168,31 @@ pub fn map(&mut self, segment: &Segment, init_data: Option<&[u8]>) -> MemoryResu
         // 需要分配帧进行映射
         MapType::Framed => {
             for vpn in segment.page_range().iter() {
-                // 如果有初始化数据，找到相应的数据
-                let page_data = if init_data.is_none() || init_data.unwrap().is_empty() {
-                    [0u8; PAGE_SIZE]
-                } else {
-                    // 这里必须进行一些调整，因为传入的数据可能并非按照整页对齐
+                // 页面的数据，默认为全零
+                let mut page_data = [0u8; PAGE_SIZE];
+                // 如果提供了数据，则使用这些数据来填充 page_data
+                if let Some(init_data) = init_data {
+                    if !init_data.is_empty() {
+                        // 这里必须进行一些调整，因为传入的数据可能并非按照整页对齐
 
-                    // 传入的初始化数据
-                    let init_data = init_data.unwrap();
-                    // 整理后将要返回的一整个页面的数据
-                    let mut page_data = [0u8; PAGE_SIZE];
-
-                    // 拷贝时必须考虑区间与整页不对齐的情况
-                    //    start（仅第一页时非零）
-                    //      |        stop（仅最后一页时非零）
-                    // 0    |---data---|          4096
-                    // |------------page------------|
-                    let page_address = VirtualAddress::from(vpn);
-                    let start = if segment.range.start > page_address {
-                        segment.range.start - page_address
-                    } else {
-                        0
-                    };
-                    let stop = min(PAGE_SIZE, segment.range.end - page_address);
-                    // 计算来源和目标区间并进行拷贝
-                    let dst_slice = &mut page_data[start..stop];
-                    let src_slice = &init_data[(page_address + start - segment.range.start)
-                        ..(page_address + stop - segment.range.start)];
-                    dst_slice.copy_from_slice(src_slice);
-
-                    page_data
+                        // 拷贝时必须考虑区间与整页不对齐的情况
+                        //    start（仅第一页时非零）
+                        //      |        stop（仅最后一页时非零）
+                        // 0    |---data---|          4096
+                        // |------------page------------|
+                        let page_address = VirtualAddress::from(vpn);
+                        let start = if segment.range.start > page_address {
+                            segment.range.start - page_address
+                        } else {
+                            0
+                        };
+                        let stop = min(PAGE_SIZE, segment.range.end - page_address);
+                        // 计算来源和目标区间并进行拷贝
+                        let dst_slice = &mut page_data[start..stop];
+                        let src_slice = &init_data[(page_address + start - segment.range.start)
+                            ..(page_address + stop - segment.range.start)];
+                        dst_slice.copy_from_slice(src_slice);
+                    }
                 };
 
                 // 建立映射
