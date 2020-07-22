@@ -29,7 +29,7 @@ pub struct Thread {
     /// 线程的栈
     pub stack: Range<VirtualAddress>,
     /// 所属的进程
-    pub process: Arc<RwLock<Process>>,
+    pub process: Arc<Process>,
     /// 用 `Mutex` 包装一些可变的变量
     pub inner: Mutex<ThreadInner>,
 }
@@ -44,10 +44,10 @@ pub struct ThreadInner {
     pub sleeping: bool,
     /// 是否已经结束
     pub dead: bool,
-    /// 打开的文件
-    pub descriptors: Vec<Arc<dyn INode>>,
 }
 ```
+
+注意到，因为线程一般使用 `Arc<Thread>` 来保存，它是不可变的，所以其中再用 `Mutex` 来包装一部分，让这部分可以修改。
 
 ### 进程的表示
 
@@ -62,7 +62,49 @@ pub struct ThreadInner {
 pub struct Process {
     /// 是否属于用户态
     pub is_user: bool,
+    /// 用 `Mutex` 包装一些可变的变量
+    pub inner: Mutex<ProcessInner>,
+}
+
+pub struct ProcessInner {
     /// 进程中的线程公用页表 / 内存映射
     pub memory_set: MemorySet,
+//  /// 打开的文件描述符（实验五）
+//  pub descriptors: Vec<Arc<dyn INode>>,
 }
 ```
+
+同样地，线程也需要一部分是可变的。
+
+### 处理器
+
+有了线程和进程，现在，我们再抽象出「处理器」来存放和管理线程池。同时，也需要存放和管理目前正在执行的线程（即中断前执行的线程，因为操作系统在工作时是处于中断、异常或系统调用服务之中）。
+
+{% label %}os/src/process/processor.rs{% endlabel %}
+```rust
+/// 线程调度和管理
+///
+/// 休眠线程会从调度器中移除，单独保存。在它们被唤醒之前，不会被调度器安排。
+pub struct Processor {
+    /// 当前正在执行的线程
+    current_thread: Option<Arc<Thread>>,
+    /// 线程调度器，记录活跃线程
+    scheduler: SchedulerImpl<Arc<Thread>>,
+    /// 保存休眠线程
+    sleeping_threads: HashSet<Arc<Thread>>,
+}
+```
+
+- `current_thread` 需要保存当前正在运行的线程，这样当出现系统调用的时候，操作系统便可以方便地知道是哪个线程在举手。
+- `scheduler` 会负责调度线程，其接口就是简单的“添加”“移除”“获取下一个”，我们会在[后面](part-6.md)详细讲到。
+- 休眠线程是指等待一些外部资源（例如硬盘读取、外设读取等）的线程，这时 CPU 如果给其时间片运行是没有意义的，因此它们也就需要移出调度器而单独保存。
+
+{% label %}os/src/process/processor.rs{% endlabel %}
+```rust
+lazy_static! {
+    /// 全局的 [`Processor`]
+    pub static ref PROCESSOR: Lock<Processor> = Lock::new(Processor::default());
+}
+```
+
+注意到这里我们用了一个 `Lock`（`os/process/lock.rs`），它封装了 `spin::Mutex`，而在其基础上进一步关闭了中断。这是因为我们（以后）在内核线程中也有可能访问 `PROCESSOR`，但是此时我们不希望它被时钟打断，这样在中断处理中就无法访问 `PROCESSOR` 了，因为它已经被锁住。

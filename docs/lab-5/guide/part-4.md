@@ -83,7 +83,7 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     // 把多余的 process 引用丢弃掉
     drop(process);
 
-    PROCESSOR.get().run()
+    PROCESSOR.lock().run()
 }
 
 /// 测试任何内核线程都可以操作文件系统和驱动
@@ -107,12 +107,12 @@ fn simple(id: usize) {
 mod memory initialized
 mod interrupt initialized
 mod driver initialized
-files in /: 
-  . .. temp rust 
+files in /:
+  . .. temp rust
 mod fs initialized
 hello from thread id 0
-files in /: 
-  . .. temp rust tmp 
+files in /:
+  . .. temp rust tmp
 100 tick
 200 tick
 ...

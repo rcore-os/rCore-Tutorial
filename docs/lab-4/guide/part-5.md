@@ -1,131 +1,109 @@
-## 调度器
+## 内核栈
 
-### 处理器抽象
+### 为什么 / 怎么做
 
-我们已经可以创建和保存线程了，现在，我们再抽象出「处理器」来存放和管理线程池。同时，也需要存放和管理目前正在执行的线程（即中断前执行的线程，因为操作系统在工作时是处于中断、异常或系统调用服务之中）。
+在实现内核栈之前，让我们先检查一下需求和我们的解决办法。
 
-{% label %}os/src/process/processor.rs{% endlabel %}
+- **不是每个线程都需要一个独立的内核栈**，因为内核栈只会在中断时使用，而中断结束后就不再使用。在只有一个 CPU 的情况下，不会有两个线程同时出现中断，**所以我们只需要实现一个共用的内核栈就可以了**。
+- **每个线程都需要能够在中断时第一时间找到内核栈的地址**。这时，所有通用寄存器的值都无法预知，也无法从某个变量来加载地址。为此，**我们将内核栈的地址存放到内核态使用的特权寄存器 `sscratch` 中**。这个寄存器只能在内核态访问，这样在中断发生时，就可以安全地找到内核栈了。
+
+因此，我们的做法就是：
+
+- 预留一段空间作为内核栈
+- 运行线程时，在 `sscratch` 寄存器中保存内核栈指针  
+- 如果线程遇到中断，则从将 `Context` 压入 `sscratch` 指向的栈中（`Context` 的地址为 `sscratch - size_of::<Context>()`），同时用新的栈地址来替换 `sp`（此时 `sp` 也会被复制到 `a0` 作为 `handle_interrupt` 的参数）  
+- 从中断中返回时（`__restore` 时），`a0` 应指向**被压在内核栈中的 `Context`**。此时出栈 `Context` 并且将栈顶保存到 `sscratch` 中
+
+### 实现
+
+#### 为内核栈预留空间
+
+我们直接使用一个 `static mut` 来指定一段空间作为栈。
+
+{% label %}os/src/process/kernel_stack.rs{% endlabel %}
 ```rust
-lazy_static! {
-    /// 全局的 [`Processor`]
-    pub static ref PROCESSOR: Lock<Processor> = Lock::new(Processor::default());
-}
+/// 内核栈
+#[repr(align(16))]
+#[repr(C)]
+pub struct KernelStack([u8; KERNEL_STACK_SIZE]);
 
-/// 线程调度和管理
-#[derive(Default)]
-pub struct Processor {
-    /// 当前正在执行的线程
-    current_thread: Option<Arc<Thread>>,
-    /// 线程调度器，记录活跃线程
-    scheduler: SchedulerImpl<Arc<Thread>>,
-    /// 保存休眠线程
-    sleeping_threads: HashSet<Arc<Thread>>,
-}
+/// 公用的内核栈
+pub static mut KERNEL_STACK: KernelStack = KernelStack([0; STACK_SIZE]);
 ```
 
-注意到这里我们用了一个 `Lock`，它封装了 `spin::Mutex`，而在其基础上进一步关闭了中断。这是因为我们在内核线程中也有可能访问 `PROCESSOR`，但是此时我们不希望它被时钟打断，这样在中断处理中就无法访问 `PROCESSOR` 了，因为它已经被锁住。
+在我们创建线程时，需要使用的操作就是在内核栈顶压入一个初始状态 `Context`：
 
-### 调度器
-
-调度器的算法有许多种，我们将它提取出一个 trait 作为接口
-
-{% label %}os/src/algorithm/src/scheduler/mod.rs{% endlabel %}
+{% label %}os/src/process/kernel_stack.rs{% endlabel %}
 ```rust
-/// 线程调度器
-///
-/// 这里 `ThreadType` 就是 `Arc<Thread>`
-pub trait Scheduler<ThreadType: Clone + Eq>: Default {
-    /// 优先级的类型
-    type Priority;
-    /// 向线程池中添加一个线程
-    fn add_thread(&mut self, thread: ThreadType);
-    /// 获取下一个时间段应当执行的线程
-    fn get_next(&mut self) -> Option<ThreadType>;
-    /// 移除一个线程
-    fn remove_thread(&mut self, thread: &ThreadType);
-    /// 设置线程的优先级
-    fn set_priority(&mut self, thread: ThreadType, priority: Self::Priority);
-}
-```
-
-具体的算法就不在此展开了，我们可以参照目录 `os/src/algorithm/src/scheduler` 下的一些样例。
-
-### 运行！
-
-最后，让我们补充 `Processor::run` 的实现，让我们运行起第一个线程！
-
-{% label %}os/src/process/processor.rs: impl Processor{% endlabel %}
-```rust
-/// 第一次开始运行
-pub fn run(&mut self) -> ! {
-    // interrupt.asm 中的标签
-    extern "C" {
-        fn __restore(context: usize);
-    }
-    // 从 current_thread 中取出 Context
-    if self.current_thread.is_none() {
-        panic!("no thread to run, shutting down");
-    }
-    let context = self.current_thread().prepare();
-    // 从此将没有回头
-    unsafe {
-        __restore(context as usize);
-    }
-    unreachable!()
-}
-```
-
-修改 `main.rs`，我们就可以跑起来多线程了。
-
-{% label %}os/src/main.rs{% endlabel %}
-```rust
-/// Rust 的入口函数
-///
-/// 在 `_start` 为我们进行了一系列准备之后，这是第一个被调用的 Rust 函数
-#[no_mangle]
-pub extern "C" fn rust_main() -> ! {
-    memory::init();
-    interrupt::init();
-
-    {
-        // 新建一个带有内核映射的进程。需要执行的代码就在内核中
-        let process = Process::new_kernel().unwrap();
-
-        for message in 0..8 {
-            let thread = Thread::new(
-                process.clone(),            // 使用同一个进程
-                sample_process as usize,    // 入口函数
-                Some(&[message]),           // 参数
-            ).unwrap();
-            PROCESSOR.get().add_thread(thread);
+impl KernelStack {
+    /// 在栈顶加入 Context 并且返回新的栈顶指针
+    pub fn push_context(&mut self, context: Context) -> *mut Context {
+        // 栈顶
+        let stack_top = &self.0 as *const _ as usize + size_of::<Self>();
+        // Context 的位置
+        let push_address = (stack_top - size_of::<Context>()) as *mut Context;
+        unsafe {
+            *push_address = context;
         }
-    }
-
-    PROCESSOR.get().run();
-}
-
-fn sample_process(message: usize) {
-    for i in 0..1000000 {
-        if i % 200000 == 0 {
-            println!("thread {}", message);
-        }
+        push_address
     }
 }
-
 ```
 
-运行一下，我们会得到类似的输出：
+#### 修改 `interrupt.asm`
 
-{% label %}运行输出{% endlabel %}
+在这个汇编代码中，我们需要加入对 `sscratch` 的判断和使用。
+
+{% label %}os/src/interrput/interrupt.asm{% endlabel %}
+```asm
+__interrupt:
+    # 因为线程当前的栈不一定可用，必须切换到内核栈来保存 Context 并进行中断流程
+    # 因此，我们使用 sscratch 寄存器保存内核栈地址
+    # 思考：sscratch 的值最初是在什么地方写入的？
+
+    # 交换 sp 和 sscratch（切换到内核栈）
+    csrrw   sp, sscratch, sp
+    # 在内核栈开辟 Context 的空间
+    addi    sp, sp, -36*8
+
+    # 保存通用寄存器，除了 x0（固定为 0）
+    SAVE    x1, 1
+    # 将本来的栈地址 sp（即 x2）保存
+    csrr    x1, sscratch
+    SAVE    x1, 2
+
+    # ...
 ```
-thread 7
-thread 6
-thread 5
-...
-thread 7
-...
-thread 2
-thread 1
-thread 0
-...
+
+以及事后的恢复：
+
+{% label %}os/src/interrupt/interrupt.asm{% endlabel %}
+```asm
+# 离开中断
+# 此时内核栈顶被推入了一个 Context，而 a0 指向它
+# 接下来从 Context 中恢复所有寄存器，并将 Context 出栈（用 sscratch 记录内核栈地址）
+# 最后跳转至恢复的 sepc 的位置
+__restore:
+    # 从 a0 中读取 sp
+    # 思考：a0 是在哪里被赋值的？（有两种情况）
+    mv      sp, a0
+    # 恢复 CSR
+    LOAD    t0, 32
+    LOAD    t1, 33
+    csrw    sstatus, t0
+    csrw    sepc, t1
+    # 将内核栈地址写入 sscratch
+    addi    t0, sp, 36*8
+    csrw    sscratch, t0
+
+    # 恢复通用寄存器
+    # ...
 ```
+
+### 小结
+
+为了能够鲁棒地处理用户线程产生的异常，我们为线程准备好一个内核栈，发生中断时会切换到这里继续处理。
+
+#### 思考
+
+在栈的切换过程中，会不会导致一些栈空间没有被释放，或者被错误释放的情况？

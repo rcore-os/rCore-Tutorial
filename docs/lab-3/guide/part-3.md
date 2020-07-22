@@ -12,7 +12,6 @@ bit_field = "0.10.0"
 
 然后，首先了构建了通过虚拟页号获得三级 VPN 的函数：
 {% label %}os/src/memory/address.rs{% endlabel %}
-
 ```rust
 impl VirtualPageNumber {
     /// 得到一、二、三级页号

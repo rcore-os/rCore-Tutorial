@@ -31,12 +31,6 @@ unsafe fn wait_for_interrupt() {
 /// 休眠线程会从调度器中移除，单独保存。在它们被唤醒之前，不会被调度器安排。
 ///
 /// # 用例
-/// ### 初始化并运行第一个线程
-/// ```rust
-/// processor.add_thread(thread);
-/// processor.run();
-/// unreachable!();
-/// ```
 ///
 /// ### 切换线程（在中断中）
 /// ```rust
@@ -78,29 +72,6 @@ impl Processor {
         self.current_thread.as_ref().unwrap().clone()
     }
 
-    /// 第一次开始运行
-    ///
-    /// 从 `current_thread` 中取出 [`Context`]，然后直接调用 `interrupt.asm` 中的 `__restore`
-    /// 来从 `Context` 中继续执行该线程。
-    ///
-    /// 注意调用 `run()` 的线程会就此步入虚无，不再被使用
-    pub fn run(&mut self) -> ! {
-        // interrupt.asm 中的标签
-        extern "C" {
-            fn __restore(context: usize);
-        }
-        // 从 current_thread 中取出 Context
-        if self.current_thread.is_none() {
-            panic!("no thread to run, shutting down");
-        }
-        let context = self.current_thread().prepare();
-        // 从此将没有回头
-        unsafe {
-            __restore(context as usize);
-        }
-        unreachable!()
-    }
-
     /// 激活下一个线程的 `Context`
     pub fn prepare_next_thread(&mut self) -> *mut Context {
         // 向调度器询问下一个线程
@@ -124,9 +95,6 @@ impl Processor {
 
     /// 添加一个待执行的线程
     pub fn add_thread(&mut self, thread: Arc<Thread>) {
-        if self.current_thread.is_none() {
-            self.current_thread = Some(thread.clone());
-        }
         self.scheduler.add_thread(thread);
     }
 

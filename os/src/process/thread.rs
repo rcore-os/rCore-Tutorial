@@ -16,7 +16,7 @@ pub struct Thread {
     /// 线程的栈
     pub stack: Range<VirtualAddress>,
     /// 所属的进程
-    pub process: Arc<RwLock<Process>>,
+    pub process: Arc<Process>,
     /// 用 `Mutex` 包装一些可变的变量
     pub inner: Mutex<ThreadInner>,
 }
@@ -39,7 +39,7 @@ impl Thread {
     /// 激活对应进程的页表，并返回其 Context
     pub fn prepare(&self) -> *mut Context {
         // 激活页表
-        self.process.write().memory_set.activate();
+        self.process.inner().memory_set.activate();
         // 取出 Context
         let parked_frame = self.inner().context.take().unwrap();
         // 将 Context 放至内核栈顶
@@ -56,22 +56,15 @@ impl Thread {
 
     /// 创建一个线程
     pub fn new(
-        process: Arc<RwLock<Process>>,
+        process: Arc<Process>,
         entry_point: usize,
         arguments: Option<&[usize]>,
     ) -> MemoryResult<Arc<Thread>> {
         // 让所属进程分配并映射一段空间，作为线程的栈
-        let stack = process
-            .write()
-            .alloc_page_range(STACK_SIZE, Flags::READABLE | Flags::WRITABLE)?;
+        let stack = process.alloc_page_range(STACK_SIZE, Flags::READABLE | Flags::WRITABLE)?;
 
         // 构建线程的 Context
-        let context = Context::new(
-            stack.end.into(),
-            entry_point,
-            arguments,
-            process.read().is_user,
-        );
+        let context = Context::new(stack.end.into(), entry_point, arguments, process.is_user);
 
         // 打包成线程
         let thread = Arc::new(Thread {
@@ -91,6 +84,7 @@ impl Thread {
         Ok(thread)
     }
 
+    /// 上锁并获得可变部分的引用
     pub fn inner(&self) -> spin::MutexGuard<ThreadInner> {
         self.inner.lock()
     }
