@@ -28,38 +28,43 @@ fn breakpoint(context: &mut Context) -> *mut Context {
 /// 处理时钟中断
 fn supervisor_timer(context: &mut Context) -> *mut Context {
     timer::tick();
-    PROCESSOR.get().tick(context)
+    PROCESSOR.lock().park_current_thread(context);
+    PROCESSOR.lock().prepare_next_thread()
 }
 ```
 
-可以看到，当发生断点中断时，直接返回原来的上下文（修改一下 `sepc`）；而如果是时钟中断的时候，我们通过执行 `PROCESSOR.get().tick(context)` 函数得到的返回值作为上下文，那它又是怎么工作的呢？
+可以看到，当发生断点中断时，直接返回原来的上下文（修改一下 `sepc`）；而如果是时钟中断的时候，我们执行了两个函数得到的返回值作为上下文，那它又是怎么工作的呢？
 
 ### 线程切换
 
-让我们看一下 `Processor::tick` 函数是如何实现的。
+让我们看一下 `Processor` 中的这两个方法是如何实现的。
 
 （调度器 `scheduler` 会在后面的小节中讲解，我们只需要知道它能够返回下一个等待执行的线程。）
 
 {% label %}os/src/process/processor.rs: impl Processor{% endlabel %}
 ```rust
+/// 保存当前线程的 `Context`
+pub fn park_current_thread(&mut self, context: &Context) {
+    self.current_thread().park(*context);
+}
+
 /// 在一个时钟中断时，替换掉 context
-pub fn tick(&mut self, context: &mut Context) -> *mut Context {
+pub fn prepare_next_thread(&mut self) -> *mut Context {
     // 向调度器询问下一个线程
     if let Some(next_thread) = self.scheduler.get_next() {
-        if next_thread == self.current_thread() {
-            // 没有更换线程，直接返回 Context
-            context
-        } else {
-            // 准备下一个线程
-            let next_context = next_thread.run();
-            let current_thread = self.current_thread.replace(next_thread).unwrap();
-            // 储存当前线程 Context
-            current_thread.park(*context);
-            // 返回下一个线程的 Context
-            next_context
-        }
+        // 准备下一个线程
+        let context = next_thread.prepare();
+        self.current_thread = Some(next_thread);
+        context
     } else {
-        panic!("all threads terminated, shutting down");
+        // 没有活跃线程
+        if self.sleeping_threads.is_empty() {
+            // 也没有休眠线程，则退出
+            panic!("all threads terminated, shutting down");
+        } else {
+            // 有休眠线程，则等待中断
+            /* ... */
+        }
     }
 }
 ```
@@ -73,47 +78,34 @@ pub fn tick(&mut self, context: &mut Context) -> *mut Context {
 /// 发生时钟中断后暂停线程，保存状态
 pub fn park(&self, context: Context) {
     // 检查目前线程内的 context 应当为 None
-    let mut slot = self.context.lock();
-    assert!(slot.is_none());
+    assert!(self.inner().context.is_none());
     // 将 Context 保存到线程中
-    slot.replace(context);
+    self.inner().context.replace(context);
 }
 ```
 
-然后，我们需要取出下一个线程的 `Context`，为此我们实现 `Thread::run`。不过这次需要注意的是，启动一个线程除了需要 `Context`，还需要切换页表。这个操作我们也在这个方法中完成。
+然后，我们需要取出下一个线程的 `Context`，为此我们实现 `Thread::prepare`。不过这次需要注意的是，启动一个线程除了需要 `Context`，还需要切换页表。这个操作我们也在这个方法中完成。
 
 {% label %}os/src/process/thread.rs: impl Thread{% endlabel %}
 ```rust
 /// 准备执行一个线程
 ///
 /// 激活对应进程的页表，并返回其 Context
-pub fn run(&self) -> *mut Context {
+pub fn prepare(&self) -> *mut Context {
     // 激活页表
-    self.process.read().memory_set.activate();
+    self.process.inner().memory_set.activate();
     // 取出 Context
-    let parked_frame = self.context.lock().take().unwrap();
-
-    if self.process.read().is_user {
-        // 用户线程则将 Context 放至内核栈顶
-        KERNEL_STACK.push_context(parked_frame)
-    } else {
-        // 内核线程则将 Context 放至 sp 下
-        let context = (parked_frame.sp() - size_of::<Context>()) as *mut Context;
-        unsafe { *context = parked_frame };
-        context
-    }
+    let parked_frame = self.inner().context.take().unwrap();
+    // 将 Context 放至内核栈顶
+    unsafe { KERNEL_STACK.push_context(parked_frame) }
 }
 ```
 
 思考：在 `run` 函数中，我们在一开始就激活了页表，会不会导致后续流程无法正常执行？
 
-{% reveal %}
-> 不会，因为每一个进程的 `MemorySet` 都会映射操作系统的空间，否则在遇到中断的时候，将无法执行异常处理。
-{% endreveal %}
-
 #### 内核栈？
 
-现在，线程保存 `Context` 都是根据 `sp` 指针，在栈上压入一个 `Context` 来存储。但是，对于一个用户线程而言，它在用户态运行时用的是位于用户空间的用户栈。而它在用户态运行中如果触发中断，`sp` 指针指向的是用户空间的某地址，但此时 RISC-V CPU 会切换到内核态继续执行，就不能再用这个 `sp` 指针指向的用户空间地址了。这样，我们需要为sp指针准备好一个专门用于在内核态执行函数的内核栈。所以，为了不让一个线程的崩溃导致操作系统的崩溃，我们需要提前准备好内核栈，当线程发生中断时可用来存储线程的 `Context`。在下一节我们将具体讲解该如何做。
+现在，线程保存 `Context` 都是根据 `sp` 指针，在栈上压入一个 `Context` 来存储。但是，对于一个用户线程而言，它在用户态运行时用的是位于用户空间的用户栈。而它在用户态运行中如果触发中断，`sp` 指针指向的是用户空间的某地址，但此时 RISC-V CPU 会切换到内核态继续执行，就不能再用这个 `sp` 指针指向的用户空间地址了。这样，我们需要为 sp 指针准备好一个专门用于在内核态执行函数的内核栈。所以，为了不让一个线程的崩溃导致操作系统的崩溃，我们需要提前准备好内核栈，当线程发生中断时可用来存储线程的 `Context`。在下一节我们将具体讲解该如何做。
 
 ### 小结
 

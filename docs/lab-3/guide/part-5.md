@@ -1,4 +1,4 @@
-## 页面置换*
+## 页面置换\*
 
 > **[info] 注意**
 > 本小节涉及内容繁杂，实现也可能有考虑不周之处，具体的代码仅供有兴趣的同学阅读。
@@ -168,7 +168,7 @@ impl Mapping {
 /// todo: 理论上这里需要判断访问类型，并与页表中的标志位进行比对
 fn page_fault(context: &mut Context, stval: usize) -> Result<*mut Context, String> {
     println!("page_fault");
-    let current_thread = PROCESSOR.get().current_thread();
+    let current_thread = PROCESSOR.lock().current_thread();
     let memory_set = &mut current_thread.process.write().memory_set;
     memory_set.mapping.handle_page_fault(stval)?;
     memory_set.activate();

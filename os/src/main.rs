@@ -55,7 +55,6 @@ use alloc::sync::Arc;
 use fs::{INodeExt, ROOT_INODE};
 use memory::PhysicalAddress;
 use process::*;
-use spin::RwLock;
 use xmas_elf::ElfFile;
 
 // 汇编编写的程序入口，具体见该文件
@@ -72,27 +71,36 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     fs::init();
 
     {
-        let mut processor = PROCESSOR.get();
+        let mut processor = PROCESSOR.lock();
+        // 创建一个内核进程
         let kernel_process = Process::new_kernel().unwrap();
-        for i in 1..33usize {
+        // 为这个进程创建多个线程，并设置入口均为 sample_process，而参数不同
+        for i in 1..9usize {
             processor.add_thread(create_kernel_thread(
                 kernel_process.clone(),
-                test_kernel_thread as usize,
+                sample_process as usize,
                 Some(&[i]),
             ));
         }
     }
 
-    unsafe { PROCESSOR.unsafe_get().run() }
+    extern "C" {
+        fn __restore(context: usize);
+    }
+    // 获取第一个线程的 Context
+    let context = PROCESSOR.lock().prepare_next_thread();
+    // 启动第一个线程
+    unsafe { __restore(context as usize) };
+    unreachable!()
 }
 
-fn test_kernel_thread(id: usize) {
+fn sample_process(id: usize) {
     println!("hello from kernel thread {}", id);
 }
 
 /// 创建一个内核进程
 pub fn create_kernel_thread(
-    process: Arc<RwLock<Process>>,
+    process: Arc<Process>,
     entry_point: usize,
     arguments: Option<&[usize]>,
 ) -> Arc<Thread> {
@@ -127,7 +135,7 @@ pub fn create_user_process(name: &str) -> Arc<Thread> {
 /// 内核线程需要调用这个函数来退出
 fn kernel_thread_exit() {
     // 当前线程标记为结束
-    PROCESSOR.get().current_thread().as_ref().inner().dead = true;
+    PROCESSOR.lock().current_thread().as_ref().inner().dead = true;
     // 制造一个中断来交给操作系统处理
     unsafe { llvm_asm!("ebreak" :::: "volatile") };
 }
