@@ -24,9 +24,18 @@
     sd  \reg, \offset*8(sp)
 .endm
 
+.macro SAVE_N n
+    SAVE  x\n, \n
+.endm
+
+
 # 宏：将寄存器从栈中取出
 .macro LOAD reg, offset
     ld  \reg, \offset*8(sp)
+.endm
+
+.macro LOAD_N n
+    LOAD  x\n, \n
 .endm
 
     .section .text

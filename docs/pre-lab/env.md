@@ -64,7 +64,7 @@ sudo yum install qemu
 WSL 2 和 Ubuntu 环境安装步骤：
 
 - 升级 Windows 10 到最新版（Windows 10 版本 18917 或以后的内部版本）
-  - 如果不是 Windows 10 专业版，可能需要手动更新，在微软官网上下载。否则，可能 WSL 功能不能启动
+  - 如果不是 Windows 10 专业版，可能需要手动更新，在微软官网上下载。否则，WSL 功能可能不能启动
   - 在 PowerShell 中输入 `winver` 查看**内部版本**号
 - 「Windows 设置 > 更新和安全 > Windows 预览体验计划」处选择加入，Dev 开发者模式
 - 打开 PowerShell 终端（**管理员身份**），输入：
@@ -77,7 +77,8 @@ dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux 
 # 启用 Windows 功能：“已安装的虚拟机平台”
 dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
 
-# <Distro> 改为对应版本名，比如：`wsl --set-version Ubuntu 2`
+# <Distro> 改为对应从微软应用商店安装的 Linux 版本名，比如：`wsl --set-version Ubuntu 2`
+# 如果你没有提前从微软应用商店安装任何 Linux 版本，请跳过此步骤
 wsl --set-version <Distro> 2
 
 # 设置默认为 WSL 2，如果 Windows 版本不够，这条命令会出错
