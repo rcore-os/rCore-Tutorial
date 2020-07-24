@@ -77,7 +77,7 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     let process = Process::new_kernel().unwrap();
 
     PROCESSOR
-        .get()
+        .lock()
         .add_thread(Thread::new(process.clone(), simple as usize, Some(&[0])).unwrap());
 
     // 把多余的 process 引用丢弃掉

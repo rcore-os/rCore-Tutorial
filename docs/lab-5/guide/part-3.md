@@ -46,6 +46,7 @@ lazy_static! {
 
 有了驱动的概念，我们进一步抽象块设备：
 
+{% label %}os/src/drivers/block/mod.rs{% endlabel %}
 ```rust
 /// 块设备抽象（驱动的引用）
 pub struct BlockDevice(pub Arc<dyn Driver>);
@@ -90,6 +91,7 @@ impl dev::BlockDevice for BlockDevice {
 
 最后，我们来实现 virtio-blk 的驱动（主要通过调用现成的库完成）：
 
+{% label %}os/src/drivers/block/virtio_blk.rs{% endlabel %}
 ```rust
 /// virtio 协议的块设备驱动
 struct VirtIOBlkDriver(Mutex<VirtIOBlk<'static>>);
