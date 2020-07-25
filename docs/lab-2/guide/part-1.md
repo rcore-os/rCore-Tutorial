@@ -80,13 +80,14 @@ fn alloc_error_handler(_: alloc::alloc::Layout) -> ! {
 
 同时还有一些模块调用等细节代码，这里不再贴出，请参考完成本章后的仓库中的代码。
 
-{% reveal %}
 
+{% reveal %}
 > 提示：
 >
 > 1. 在 `os/Cargo.toml` 中添加相关的依赖；
 > 2. 在 `os/main.rs`  中添加对 Rust 新特性 `alloc_error_handler` 的引用。
->    {% endreveal %}
+{% endreveal %}
+
 
 ### 动态内存分配测试
 
