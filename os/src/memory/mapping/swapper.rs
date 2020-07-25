@@ -1,5 +1,6 @@
 //! 页面置换算法
 
+use super::*;
 use crate::memory::{frame::FrameTracker, *};
 use alloc::collections::VecDeque;
 
@@ -15,7 +16,7 @@ pub trait Swapper {
     fn pop(&mut self) -> Option<(VirtualPageNumber, FrameTracker)>;
 
     /// 添加一组映射（不会在以达到分配上限时调用）
-    fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker);
+    fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker, entry: *mut PageTableEntry);
 
     /// 只保留符合某种条件的条目（用于移除一段虚拟地址）
     fn retain(&mut self, predicate: impl Fn(&VirtualPageNumber) -> bool);
@@ -44,7 +45,7 @@ impl Swapper for FIFOSwapper {
     fn pop(&mut self) -> Option<(VirtualPageNumber, FrameTracker)> {
         self.queue.pop_front()
     }
-    fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker) {
+    fn push(&mut self, vpn: VirtualPageNumber, frame: FrameTracker, _entry: *mut PageTableEntry) {
         self.queue.push_back((vpn, frame));
     }
     fn retain(&mut self, predicate: impl Fn(&VirtualPageNumber) -> bool) {

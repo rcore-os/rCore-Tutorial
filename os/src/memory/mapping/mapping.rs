@@ -113,11 +113,11 @@ impl Mapping {
                         // 有配额，分配新的物理页面
                         let mut frame = FRAME_ALLOCATOR.lock().alloc()?;
                         // 更新页表
-                        self.map_one(vpn, Some(frame.page_number()), segment.flags)?;
+                        let entry = self.map_one(vpn, Some(frame.page_number()), segment.flags)?;
                         // 写入数据
                         (*frame).copy_from_slice(&page_data);
                         // 保存
-                        self.mapped_pairs.push(vpn, frame);
+                        self.mapped_pairs.push(vpn, frame, entry);
                     } else {
                         // 配额用完，改为在置换文件中分配一个页面
                         let swap_page = SwapTracker::new()?;
@@ -209,13 +209,13 @@ impl Mapping {
         vpn: VirtualPageNumber,
         ppn: Option<PhysicalPageNumber>,
         flags: Flags,
-    ) -> MemoryResult<()> {
+    ) -> MemoryResult<*mut PageTableEntry> {
         // 定位到页表项
         let entry = self.find_entry(vpn)?;
         assert!(entry.is_empty(), "virtual address is already mapped");
         // 页表项为空，则写入内容
         *entry = PageTableEntry::new(ppn, flags);
-        Ok(())
+        Ok(entry)
     }
 
     /// 移除一个虚拟地址的映射
@@ -227,35 +227,41 @@ impl Mapping {
     }
 
     /// 为指定的虚拟页号设置新的物理页面映射，要求虚拟页号在页表中但无现有映射
-    fn remap_one(&mut self, vpn: VirtualPageNumber, ppn: PhysicalPageNumber) -> MemoryResult<()> {
+    fn remap_one(
+        &mut self,
+        vpn: VirtualPageNumber,
+        ppn: PhysicalPageNumber,
+    ) -> MemoryResult<*mut PageTableEntry> {
         let entry = self.find_entry(vpn)?;
         assert!(!entry.is_empty() && !entry.is_valid());
         // 设置页表项的物理页号和 Valid 标志
         entry.update_page_number(Some(ppn));
-        Ok(())
+        Ok(entry)
     }
 
     /// 处理缺页异常
     pub fn handle_page_fault(&mut self, stval: usize) -> MemoryResult<()> {
+        // 发生异常的访问页面
         let vpn = VirtualPageNumber::floor(stval.into());
-        let swap_tracker = self
+        // 该页面如果在进程的内存中，则应该在 Swap 中，将其取出
+        let swap_tracker: SwapTracker = self
             .swapped_pages
             .remove(&vpn)
             .ok_or("stval page is not mapped")?;
+        // 读取该页面的数据
         let page_data = swap_tracker.read();
 
         if self.mapped_pairs.full() {
             // 取出一个映射
             let (popped_vpn, mut popped_frame) = self.mapped_pairs.pop().unwrap();
-            // print!("{:x?} -> {:x?}", popped_vpn, vpn);
             // 交换数据
             swap_tracker.write(&*popped_frame);
             (*popped_frame).copy_from_slice(&page_data);
             // 修改页表映射
             self.invalidate_one(popped_vpn)?;
-            self.remap_one(vpn, popped_frame.page_number())?;
+            let entry = self.remap_one(vpn, popped_frame.page_number())?;
             // 更新记录
-            self.mapped_pairs.push(vpn, popped_frame);
+            self.mapped_pairs.push(vpn, popped_frame, entry);
             self.swapped_pages.insert(popped_vpn, swap_tracker);
         } else {
             // 添加新的映射
@@ -263,9 +269,9 @@ impl Mapping {
             // 复制数据
             (*frame).copy_from_slice(&page_data);
             // 更新映射
-            self.remap_one(vpn, frame.page_number())?;
+            let entry = self.remap_one(vpn, frame.page_number())?;
             // 更新记录
-            self.mapped_pairs.push(vpn, frame);
+            self.mapped_pairs.push(vpn, frame, entry);
         }
         Ok(())
     }
