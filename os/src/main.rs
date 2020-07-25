@@ -70,19 +70,11 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     drivers::init(dtb_pa);
     fs::init();
 
-    {
-        let kernel_process = Process::new_kernel().unwrap();
-        PROCESSOR.lock().add_thread(create_kernel_thread(
-            kernel_process.clone(),
-            test_page_fault as usize,
-            None,
-        ));
-        PROCESSOR.lock().add_thread(create_kernel_thread(
-            kernel_process,
-            test_page_fault as usize,
-            None,
-        ));
-    }
+    PROCESSOR.lock().add_thread(create_kernel_thread(
+        Process::new_kernel().unwrap(),
+        test_page_fault as usize,
+        None,
+    ));
 
     extern "C" {
         fn __restore(context: usize);
@@ -100,7 +92,7 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
 ///
 /// [`KERNEL_PROCESS_FRAME_QUOTA`]: memory::config::KERNEL_PROCESS_FRAME_QUOTA
 fn test_page_fault() {
-    let mut array = [0usize; 16 * 1024];
+    let mut array = [0usize; 32 * 1024];
     for i in 0..array.len() {
         array[i] = i;
     }

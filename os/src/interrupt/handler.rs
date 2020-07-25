@@ -86,7 +86,11 @@ fn breakpoint(context: &mut Context) -> *mut Context {
 ///
 /// todo: 理论上这里需要判断访问类型，并与页表中的标志位进行比对
 fn page_fault(context: &mut Context, scause: Scause, stval: usize) -> *mut Context {
-    println!("page_fault");
+    static mut COUNT: usize = 0;
+    println!("page_fault {}", unsafe {
+        COUNT += 1;
+        COUNT
+    });
     let current_thread = PROCESSOR.lock().current_thread();
     let memory_set = &mut current_thread.process.inner().memory_set;
 
