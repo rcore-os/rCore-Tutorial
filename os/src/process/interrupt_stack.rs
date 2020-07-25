@@ -23,7 +23,7 @@ use core::mem::size_of;
 pub struct InterruptStack([u8; INTERRUPT_STACK_SIZE]);
 
 /// 公用的中断栈
-pub static mut KERNEL_STACK: InterruptStack = InterruptStack([0; INTERRUPT_STACK_SIZE]);
+pub static mut INTERRUPT_STACK: InterruptStack = InterruptStack([0; INTERRUPT_STACK_SIZE]);
 
 impl InterruptStack {
     /// 在栈顶加入 Context 并且返回新的栈顶指针

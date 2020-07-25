@@ -20,7 +20,7 @@
 
 我们直接使用一个 `static mut` 来指定一段空间作为栈。
 
-{% label %}os/src/process/kernel_stack.rs{% endlabel %}
+{% label %}os/src/process/interrupt_stack.rs{% endlabel %}
 ```rust
 /// 中断栈
 #[repr(align(16))]
@@ -28,12 +28,12 @@
 pub struct InterruptStack([u8; INTERRUPT_STACK_SIZE]);
 
 /// 公用的中断栈
-pub static mut KERNEL_STACK: InterruptStack = InterruptStack([0; STACK_SIZE]);
+pub static mut INTERRUPT_STACK: InterruptStack = InterruptStack([0; STACK_SIZE]);
 ```
 
 在我们创建线程时，需要使用的操作就是在中断栈顶压入一个初始状态 `Context`：
 
-{% label %}os/src/process/kernel_stack.rs{% endlabel %}
+{% label %}os/src/process/interrupt_stack.rs{% endlabel %}
 ```rust
 impl InterruptStack {
     /// 在栈顶加入 Context 并且返回新的栈顶指针
