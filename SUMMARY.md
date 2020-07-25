@@ -1,6 +1,7 @@
 # rCore 教学实验文档
 
 * [实验简介](README.md)
+* [更新日志](notes/log.md)
 
 ## 实验之前
 <!-- TODO * [Rust 基础介绍](docs/pre-lab/rust.md)  -->
