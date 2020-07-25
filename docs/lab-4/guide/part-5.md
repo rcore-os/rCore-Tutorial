@@ -25,17 +25,17 @@
 /// 中断栈
 #[repr(align(16))]
 #[repr(C)]
-pub struct KernelStack([u8; KERNEL_STACK_SIZE]);
+pub struct InterruptStack([u8; INTERRUPT_STACK_SIZE]);
 
 /// 公用的中断栈
-pub static mut KERNEL_STACK: KernelStack = KernelStack([0; STACK_SIZE]);
+pub static mut KERNEL_STACK: InterruptStack = InterruptStack([0; STACK_SIZE]);
 ```
 
 在我们创建线程时，需要使用的操作就是在中断栈顶压入一个初始状态 `Context`：
 
 {% label %}os/src/process/kernel_stack.rs{% endlabel %}
 ```rust
-impl KernelStack {
+impl InterruptStack {
     /// 在栈顶加入 Context 并且返回新的栈顶指针
     pub fn push_context(&mut self, context: Context) -> *mut Context {
         // 栈顶

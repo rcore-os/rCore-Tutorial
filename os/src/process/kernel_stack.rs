@@ -1,4 +1,4 @@
-//! 中断栈 [`KernelStack`]
+//! 中断栈 [`InterruptStack`]
 //!
 //! 用户态的线程出现中断时，因为运行栈无法保证可用性，中断处理流程必须在中断栈上进行。
 //! 所以我们创建一个公用的中断栈，即当发生中断时，会将 Context 写到中断栈顶。
@@ -20,12 +20,12 @@ use core::mem::size_of;
 /// 中断栈
 #[repr(align(16))]
 #[repr(C)]
-pub struct KernelStack([u8; KERNEL_STACK_SIZE]);
+pub struct InterruptStack([u8; INTERRUPT_STACK_SIZE]);
 
 /// 公用的中断栈
-pub static mut KERNEL_STACK: KernelStack = KernelStack([0; KERNEL_STACK_SIZE]);
+pub static mut KERNEL_STACK: InterruptStack = InterruptStack([0; INTERRUPT_STACK_SIZE]);
 
-impl KernelStack {
+impl InterruptStack {
     /// 在栈顶加入 Context 并且返回新的栈顶指针
     pub fn push_context(&mut self, context: Context) -> *mut Context {
         // 栈顶

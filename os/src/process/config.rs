@@ -4,4 +4,4 @@
 pub const STACK_SIZE: usize = 0x8_0000;
 
 /// 共用的中断栈大小 512 KB
-pub const KERNEL_STACK_SIZE: usize = 0x8_0000;
+pub const INTERRUPT_STACK_SIZE: usize = 0x8_0000;
