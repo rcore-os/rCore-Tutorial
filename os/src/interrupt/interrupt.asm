@@ -1,11 +1,28 @@
+# 我们将会用一个宏来用循环保存寄存器。这是必要的设置
+.altmacro
+# 寄存器宽度对应的字节数
+.set    REG_SIZE, 8
+# Context 的大小
+.set    CONTEXT_SIZE, 34
+
 # 宏：将寄存器存到栈上
 .macro SAVE reg, offset
-    sd  \reg, \offset*8(sp)
+    sd \reg, \offset * REG_SIZE(sp)
 .endm
 
 # 宏：将寄存器从栈中取出
 .macro LOAD reg, offset
-    ld  \reg, \offset*8(sp)
+    ld \reg, \offset * REG_SIZE(sp)
+.endm
+
+# 宏：将 n 号寄存器保存在第 n 个位置
+.macro SAVE_N n
+    SAVE x\n, n
+.endm
+
+# 宏：将 n 号寄存器从第 n 个位置取出
+.macro LOAD_N n
+    LOAD x\n, n
 .endm
 
     .section .text
@@ -20,42 +37,19 @@ __interrupt:
     # 交换 sp 和 sscratch（切换到内核栈）
     csrrw   sp, sscratch, sp
     # 在内核栈开辟 Context 的空间
-    addi    sp, sp, -36*8
+    addi    sp, sp, -CONTEXT_SIZE * REG_SIZE
     
     # 保存通用寄存器，除了 x0（固定为 0）
     SAVE    x1, 1
     # 将本来的栈地址 sp（即 x2）保存
     csrr    x1, sscratch
     SAVE    x1, 2
-    SAVE    x3, 3
-    SAVE    x4, 4
-    SAVE    x5, 5
-    SAVE    x6, 6
-    SAVE    x7, 7
-    SAVE    x8, 8
-    SAVE    x9, 9
-    SAVE    x10, 10
-    SAVE    x11, 11
-    SAVE    x12, 12
-    SAVE    x13, 13
-    SAVE    x14, 14
-    SAVE    x15, 15
-    SAVE    x16, 16
-    SAVE    x17, 17
-    SAVE    x18, 18
-    SAVE    x19, 19
-    SAVE    x20, 20
-    SAVE    x21, 21
-    SAVE    x22, 22
-    SAVE    x23, 23
-    SAVE    x24, 24
-    SAVE    x25, 25
-    SAVE    x26, 26
-    SAVE    x27, 27
-    SAVE    x28, 28
-    SAVE    x29, 29
-    SAVE    x30, 30
-    SAVE    x31, 31
+    # 保存 x3 至 x31
+    .set    n, 3
+    .rept   29
+        SAVE_N  %n
+        .set    n, n + 1
+    .endr
 
     # 取出 CSR 并保存
     csrr    t0, sstatus
@@ -86,40 +80,17 @@ __restore:
     csrw    sstatus, t0
     csrw    sepc, t1
     # 将内核栈地址写入 sscratch
-    addi    t0, sp, 36*8
+    addi    t0, sp, CONTEXT_SIZE * REG_SIZE
     csrw    sscratch, t0
 
     # 恢复通用寄存器
     LOAD    x1, 1
-    LOAD    x3, 3
-    LOAD    x4, 4
-    LOAD    x5, 5
-    LOAD    x6, 6
-    LOAD    x7, 7
-    LOAD    x8, 8
-    LOAD    x9, 9
-    LOAD    x10, 10
-    LOAD    x11, 11
-    LOAD    x12, 12
-    LOAD    x13, 13
-    LOAD    x14, 14
-    LOAD    x15, 15
-    LOAD    x16, 16
-    LOAD    x17, 17
-    LOAD    x18, 18
-    LOAD    x19, 19
-    LOAD    x20, 20
-    LOAD    x21, 21
-    LOAD    x22, 22
-    LOAD    x23, 23
-    LOAD    x24, 24
-    LOAD    x25, 25
-    LOAD    x26, 26
-    LOAD    x27, 27
-    LOAD    x28, 28
-    LOAD    x29, 29
-    LOAD    x30, 30
-    LOAD    x31, 31
+    # 恢复 x3 至 x31
+    .set    n, 3
+    .rept   29
+        LOAD_N  %n
+        .set    n, n + 1
+    .endr
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2

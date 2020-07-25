@@ -117,7 +117,7 @@ let process = Process::from_elf(&elf, true).unwrap();
 // 再从 ELF 中读出程序入口地址
 let thread = Thread::new(process, elf.header.pt2.entry_point() as usize, None).unwrap();
 // 添加线程
-PROCESSOR.get().add_thread(thread);
+PROCESSOR.lock().add_thread(thread);
 ```
 
 可惜的是，我们不能像内核线程一样在用户程序中直接使用 `print`。前者是基于 OpenSBI 的机器态 SBI 调用，而为了让用户程序能够打印字符，我们还需要在操作系统中实现系统调用来给用户进程提供服务。

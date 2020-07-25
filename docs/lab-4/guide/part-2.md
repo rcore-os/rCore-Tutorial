@@ -26,7 +26,7 @@
 
 首先我们稍作修改，添加一行 `mv sp, a0`。原本这里是读取之前存好的 `Context`，现在我们让其从 `a0` 中读取我们设计好的 `Context`。这样，我们可以直接在 Rust 代码中调用 `__restore(context)`。
 
-{% label %}os/src/interrupt.asm{% endlabel %}
+{% label %}os/src/interrupt/interrupt.asm{% endlabel %}
 ```asm
 __restore:
     mv      sp, a0  # 加入这一行
@@ -67,26 +67,19 @@ __restore:
 
 设计好 `Context` 之后，我们只需要将它应用到所有的寄存器上（即执行 `__restore`），就可以切换到第一个线程了。
 
-{% label %}os/src/process/processor.rs{% endlabel %}
+{% label %}os/src/main.rs: rust_main(){% endlabel %}
 ```rust
-/// 第一次开始运行
-///
-/// 从 `current_thread` 中取出 [`Context`]，然后直接调用 `interrupt.asm` 中的 `__restore`
-/// 来从 `Context` 中继续执行该线程。
-pub fn run(&mut self) -> ! {
-    // interrupt.asm 中的标签
-    extern "C" {
-        fn __restore(context: usize);
-    }
-    /* 激活线程的页表，取得 Context。具体过程会在后面讲解 */
-    unsafe {
-        __restore(context);
-    }
-    unreachable!()
+extern "C" {
+    fn __restore(context: usize);
 }
+// 获取第一个线程的 Context，具体原理后面讲解
+let context = PROCESSOR.lock().prepare_next_thread();
+// 启动第一个线程
+unsafe { __restore(context as usize) };
+unreachable!()
 ```
 
-#### 等一下，`run()` 为什么返回 `!`！
+#### 为什么 `unreachable`
 
 我们直接调用的 `__restore` 并没有 `ret` 指令，甚至 `ra` 都会被 `Context` 中的数值直接覆盖。这意味着，一旦我们执行了 `__restore(context)`，程序就无法返回到调用它的位置了。**注：直接 jump 是一个非常危险的操作**。
 

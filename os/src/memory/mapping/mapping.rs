@@ -14,11 +14,10 @@ use crate::memory::{
     MemoryResult,
 };
 use alloc::{vec, vec::Vec};
-use core::cmp::min;
-use core::ptr::slice_from_raw_parts_mut;
+use core::{cmp::min, ptr::slice_from_raw_parts_mut};
 use hashbrown::HashMap;
 
-/// 某个进程的内存映射关系
+/// 某个线程的内存映射关系
 pub struct Mapping {
     /// 保存所有使用到的页表
     page_tables: Vec<PageTableTracker>,

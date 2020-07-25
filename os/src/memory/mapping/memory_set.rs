@@ -129,7 +129,7 @@ impl MemorySet {
     pub fn add_segment(&mut self, segment: Segment, init_data: Option<&[u8]>) -> MemoryResult<()> {
         // 检测 segment 没有重合
         assert!(!self.overlap_with(segment.page_range()));
-        // 映射
+        // 映射并将新分配的页面保存下来
         self.mapping.map(&segment, init_data)?;
         self.segments.push(segment);
         Ok(())

@@ -1,111 +1,43 @@
-## 内核栈
+## 线程的结束
 
-### 为什么 / 怎么做
+### 现有问题
 
-在实现内核栈之前，让我们先检查一下需求和我们的解决办法。
+当内核线程终止时，会发生什么？如果就按目前的实现，我们会发现线程所执行的函数末尾会触发 `Exception::InstructionPageFault` 而终止，其中访问的的地址 `stval = 0`。
 
-- **不是每个线程都需要一个独立的内核栈**，因为内核栈只会在中断时使用，而中断结束后就不再使用。在只有一个 CPU 的情况下，不会有两个线程同时出现中断，**所以我们只需要实现一个共用的内核栈就可以了**。
-- **每个线程都需要能够在中断时第一时间找到内核栈的地址**。这时，所有通用寄存器的值都无法预知，也无法从某个变量来加载地址。为此，**我们将内核栈的地址存放到内核态使用的特权寄存器 `sscratch` 中**。这个寄存器只能在内核态访问，这样在中断发生时，就可以安全地找到内核栈了。
+这是因为内核线程在执行完 `entry_point` 所指向的函数后会返回到 `ra` 指向的地址，而我们没有为其赋初值（初值为 0）。此时，程序就会尝试跳转到 `0x0` 地址，而显然它是不存在的。
 
-因此，我们的做法就是：
+### 解决办法
 
-- 预留一段空间作为内核栈
-- 运行线程时，在 `sscratch` 寄存器中保存内核栈指针  
-- 如果线程遇到中断，则从将 `Context` 压入 `sscratch` 指向的栈中（`Context` 的地址为 `sscratch - size_of::<Context>()`），同时用新的栈地址来替换 `sp`（此时 `sp` 也会被复制到 `a0` 作为 `handle_interrupt` 的参数）  
-- 从中断中返回时（`__restore` 时），`a0` 应指向**被压在内核栈中的 `Context`**。此时出栈 `Context` 并且将栈顶保存到 `sscratch` 中
+很自然的，我们希望能够让内核线程在结束时触发一个友善的中断（而不是一个看上去像是错误的缺页异常），然后被操作系统释放。我们可能会想到系统调用，但很可惜我们无法使用它，因为系统调用的本质是一个环境调用 `ecall`，而在内核线程（内核态）中进行的环境调用是用来与 M 态通信的。我们之前实现的 SBI 调用就是使用的 S 态 `ecall`。
 
-### 实现
+因此，我们设计一个折衷的解决办法：内核线程将自己标记为“已结束”，同时触发一个普通的异常 `ebreak`。此时操作系统观察到线程的标记，便将其终止。
 
-#### 为内核栈预留空间
-
-我们直接使用一个 `static mut` 来指定一段空间作为栈。
-
-{% label %}os/src/process/kernel_stack.rs{% endlabel %}
+{% label %}os/src/main.rs{% endlabel %}
 ```rust
-/// 内核栈
-#[repr(align(16))]
-#[repr(C)]
-pub struct KernelStack([u8; KERNEL_STACK_SIZE]);
-
-/// 公用的内核栈
-pub static mut KERNEL_STACK: KernelStack = KernelStack([0; STACK_SIZE]);
-```
-
-在我们创建线程时，需要使用的操作就是在内核栈顶压入一个初始状态 `Context`：
-
-{% label %}os/src/process/kernel_stack.rs{% endlabel %}
-```rust
-impl KernelStack {
-    /// 在栈顶加入 Context 并且返回新的栈顶指针
-    pub fn push_context(&mut self, context: Context) -> *mut Context {
-        // 栈顶
-        let stack_top = &self.0 as *const _ as usize + size_of::<Self>();
-        // Context 的位置
-        let push_address = (stack_top - size_of::<Context>()) as *mut Context;
-        unsafe {
-            *push_address = context;
-        }
-        push_address
-    }
+/// 内核线程需要调用这个函数来退出
+fn kernel_thread_exit() {
+    // 当前线程标记为结束
+    PROCESSOR.lock().current_thread().as_ref().inner().dead = true;
+    // 制造一个中断来交给操作系统处理
+    unsafe { llvm_asm!("ebreak" :::: "volatile") };
 }
 ```
 
-#### 修改 `interrupt.asm`
+然后，我们将这个函数作为内核线程的 `ra`，使得它执行的函数完成后便执行 `kernel_thread_exit()`
 
-在这个汇编代码中，我们需要加入对 `sscratch` 的判断和使用。
-
-{% label %}os/src/interrupt.asm{% endlabel %}
-```asm
-__interrupt:
-    # 因为线程当前的栈不一定可用，必须切换到内核栈来保存 Context 并进行中断流程
-    # 因此，我们使用 sscratch 寄存器保存内核栈地址
-    # 思考：sscratch 的值最初是在什么地方写入的？
-
-    # 交换 sp 和 sscratch（切换到内核栈）
-    csrrw   sp, sscratch, sp
-    # 在内核栈开辟 Context 的空间
-    addi    sp, sp, -36*8
-
-    # 保存通用寄存器，除了 x0（固定为 0）
-    SAVE    x1, 1
-    # 将本来的栈地址 sp（即 x2）保存
-    csrr    x1, sscratch
-    SAVE    x1, 2
-    SAVE    x3, 3
-    SAVE    x4, 4
-
-    # ...
+{% label %}os/src/main.rs{% endlabel %}
+```rust
+/// 创建一个内核进程
+pub fn create_kernel_thread(
+    process: Arc<Process>,
+    entry_point: usize,
+    arguments: Option<&[usize]>,
+) -> Arc<Thread> {
+    // 创建线程
+    let thread = Thread::new(process, entry_point, arguments).unwrap();
+    // 设置线程的返回地址为 kernel_thread_exit
+    thread.as_ref().inner().context.as_mut().unwrap()
+        .set_ra(kernel_thread_exit as usize);
+    thread
+}
 ```
-
-以及事后的恢复：
-
-{% label %}os/src/interrupt.asm{% endlabel %}
-```asm
-# 离开中断
-# 此时内核栈顶被推入了一个 Context，而 a0 指向它
-# 接下来从 Context 中恢复所有寄存器，并将 Context 出栈（用 sscratch 记录内核栈地址）
-# 最后跳转至恢复的 sepc 的位置
-__restore:
-    # 从 a0 中读取 sp
-    # 思考：a0 是在哪里被赋值的？（有两种情况）
-    mv      sp, a0
-    # 恢复 CSR
-    LOAD    t0, 32
-    LOAD    t1, 33
-    csrw    sstatus, t0
-    csrw    sepc, t1
-    # 将内核栈地址写入 sscratch
-    addi    t0, sp, 36*8
-    csrw    sscratch, t0
-
-    # 恢复通用寄存器
-    # ...
-```
-
-### 小结
-
-为了能够鲁棒地处理用户线程产生的异常，我们为线程准备好一个内核栈，发生中断时会切换到这里继续处理。
-
-#### 思考
-
-在栈的切换过程中，会不会导致一些栈空间没有被释放，或者被错误释放的情况？

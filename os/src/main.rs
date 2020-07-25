@@ -34,6 +34,9 @@
 //!   允许使用 naked 函数，即编译器不在函数前后添加出入栈操作。
 //!   这允许我们在函数中间内联汇编使用 `ret` 提前结束，而不会导致栈出现异常
 #![feature(naked_functions)]
+//!
+//! - `#![feature(slice_fill)]`
+//!   允许将 slice 填充值
 #![feature(slice_fill)]
 
 #[macro_use]
@@ -46,13 +49,13 @@ mod memory;
 mod panic;
 mod process;
 mod sbi;
+extern crate alloc;
 
-use crate::memory::PhysicalAddress;
-use fs::*;
+use alloc::sync::Arc;
+use fs::{INodeExt, ROOT_INODE};
+use memory::PhysicalAddress;
 use process::*;
 use xmas_elf::ElfFile;
-
-extern crate alloc;
 
 // 汇编编写的程序入口，具体见该文件
 global_asm!(include_str!("entry.asm"));
@@ -67,12 +70,28 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     drivers::init(dtb_pa);
     fs::init();
 
-    start_kernel_thread(test_page_fault as usize, None);
-    start_kernel_thread(test_page_fault as usize, None);
-    // start_user_thread("hello_world");
-    // start_user_thread("notebook");
+    {
+        let kernel_process = Process::new_kernel().unwrap();
+        PROCESSOR.lock().add_thread(create_kernel_thread(
+            kernel_process.clone(),
+            test_page_fault as usize,
+            None,
+        ));
+        PROCESSOR.lock().add_thread(create_kernel_thread(
+            kernel_process,
+            test_page_fault as usize,
+            None,
+        ));
+    }
 
-    PROCESSOR.get().run()
+    extern "C" {
+        fn __restore(context: usize);
+    }
+    // 获取第一个线程的 Context
+    let context = PROCESSOR.lock().prepare_next_thread();
+    // 启动第一个线程
+    unsafe { __restore(context as usize) };
+    unreachable!()
 }
 
 /// 测试缺页异常处理
@@ -91,15 +110,30 @@ fn test_page_fault() {
     println!("\x1b[32mtest passed\x1b[0m");
 }
 
-fn start_kernel_thread(entry_point: usize, arguments: Option<&[usize]>) {
-    let process = Process::new_kernel().unwrap();
+/// 创建一个内核进程
+pub fn create_kernel_thread(
+    process: Arc<Process>,
+    entry_point: usize,
+    arguments: Option<&[usize]>,
+) -> Arc<Thread> {
+    // 创建线程
     let thread = Thread::new(process, entry_point, arguments).unwrap();
-    PROCESSOR.get().add_thread(thread);
+    // 设置线程的返回地址为 kernel_thread_exit
+    thread
+        .as_ref()
+        .inner()
+        .context
+        .as_mut()
+        .unwrap()
+        .set_ra(kernel_thread_exit as usize);
+
+    thread
 }
 
-fn start_user_thread(name: &str) {
+/// 创建一个用户进程，从指定的文件名读取 ELF
+pub fn create_user_process(name: &str) -> Arc<Thread> {
     // 从文件系统中找到程序
-    let app = fs::ROOT_INODE.find(name).unwrap();
+    let app = ROOT_INODE.find(name).unwrap();
     // 读取数据
     let data = app.readall().unwrap();
     // 解析 ELF 文件
@@ -107,7 +141,13 @@ fn start_user_thread(name: &str) {
     // 利用 ELF 文件创建线程，映射空间并加载数据
     let process = Process::from_elf(&elf, true).unwrap();
     // 再从 ELF 中读出程序入口地址
-    let thread = Thread::new(process, elf.header.pt2.entry_point() as usize, None).unwrap();
-    // 添加线程
-    PROCESSOR.get().add_thread(thread);
+    Thread::new(process, elf.header.pt2.entry_point() as usize, None).unwrap()
+}
+
+/// 内核线程需要调用这个函数来退出
+fn kernel_thread_exit() {
+    // 当前线程标记为结束
+    PROCESSOR.lock().current_thread().as_ref().inner().dead = true;
+    // 制造一个中断来交给操作系统处理
+    unsafe { llvm_asm!("ebreak" :::: "volatile") };
 }

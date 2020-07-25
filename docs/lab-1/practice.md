@@ -14,7 +14,7 @@ reveal tag 作为 anchor 必须有缩进，否则会打破前后的序号关系�
 reveal 还会把行间距吃掉，所以手动加 <br>
 -->
 
-1.  简述：在 `rust_main` 函数中，执行 `ebreak` 命令后至函数结束前，`sp` 寄存器的值是怎样变化的？
+1.  原理：在 `rust_main` 函数中，执行 `ebreak` 命令后至函数结束前，`sp` 寄存器的值是怎样变化的？
 
     {% reveal %}
 > - `sp` 首先减去一个 `Context` 的大小（入栈），然后原 `sp` 的值被保存到这个入栈的 `Context` 中。
@@ -25,7 +25,7 @@ reveal 还会把行间距吃掉，所以手动加 <br>
     {% endreveal %}
 
     <br>
-2.  回答：如果去掉 `rust_main` 后的 `panic` 会发生什么，为什么？
+2.  分析：如果去掉 `rust_main` 后的 `panic` 会发生什么，为什么？
 
     {% reveal %}
 > `rust_main` 返回后，程序并没有停止。`rust_main` 是在 `entry.asm` 中通过 `jal` 指令调用的，因此其执行完后会回到 `entry.asm` 中。但是，`entry.asm` 并没有在后面写任何指令，这意味着程序将接着向后执行内存中的任何指令。
