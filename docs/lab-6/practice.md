@@ -23,4 +23,22 @@
 
 5.  实验：将一个文件打包进用户镜像，并让一个用户进程读取它并打印其内容。需要实现 `sys_open`，将文件描述符加入进程的 `descriptors` 中并返回，然后通过 `sys_read` 来读取。
 
-6.  挑战实验：实现 `sys_pipe`，为进程添加并返回两个文件描述符，分别为一个管道的读和写端。用户线程调用完 `sys_pipe` 后调用 `sys_fork`，父进程写入管道，子进程可以读取。读取时尽量避免忙等待。
+6.  挑战实验：实现 `sys_pipe`，为进程添加并返回两个文件描述符，分别为一个管道的读和写端。用户进程调用完 `sys_pipe` 后调用 `sys_fork`，父进程写入管道，子进程可以读取。读取时尽量避免忙等待。
+
+    ```rust
+    /// 用户进程样例
+    pub fn main() -> usize {
+        let (mut write_fd, mut read_fd) = sys_pipe();
+        if sys_fork() {
+            // 父进程
+            sys_close(read_fd); // 不一定需要实现
+            sys_write(write_fd, "hello_world".as_bytes());
+        } else {
+            // 子进程
+            sys_close(write_fd); // 不一定需要实现
+            let mut buffer = [0u8; 64];
+            let len = sys_read(read_fd, &mut buffer);
+            println!("{}", core::str::from_utf8(&buffer));
+        }
+    }
+    ```
