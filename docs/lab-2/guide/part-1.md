@@ -80,6 +80,15 @@ fn alloc_error_handler(_: alloc::alloc::Layout) -> ! {
 
 同时还有一些模块调用等细节代码，这里不再贴出，请参考完成本章后的仓库中的代码。
 
+
+{% reveal %}
+> 提示：
+>
+> 1. 在 `os/Cargo.toml` 中添加相关的依赖；
+> 2. 在 `os/main.rs`  中添加对 Rust 新特性 `alloc_error_handler` 的引用。
+{% endreveal %}
+
+
 ### 动态内存分配测试
 
 现在我们来测试一下动态内存分配是否有效，分配一个动态数组：
