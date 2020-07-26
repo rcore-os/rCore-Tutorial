@@ -290,7 +290,13 @@ impl MemorySet {
                 flags: Flags::READABLE | Flags::WRITABLE,
             },
         ];
+        let mut mapping = Mapping::new()?;
 
+        // 每个字段在页表中进行映射
+        for segment in segments.iter() {
+            // 映射结果保存在 mapped_pairs中
+            mapping.map(segment, None)?;
+        }
         Ok(MemorySet { mapping, segments })
     }
 
