@@ -1,5 +1,3 @@
-.PHONY: build
-
 TARGET      := riscv64imac-unknown-none-elf
 MODE        := debug
 
@@ -15,6 +13,8 @@ BIN_FILES	:= $(patsubst $(SRC_DIR)/%.rs, $(TARGET_DIR)/%, $(SRC_FILES))
 OUT_DIR		:= build/disk
 IMG_FILE	:= build/raw.img
 QCOW_FILE	:= build/disk.img
+
+.PHONY: dependency build clean
 
 # 安装 rcore-fs-fuse 工具
 dependency:

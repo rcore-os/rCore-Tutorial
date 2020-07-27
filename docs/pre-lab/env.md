@@ -29,11 +29,11 @@ brew install qemu
 {% label %}运行命令{% endlabel %}
 ```bash
 # 下载源码包 （如果下载速度过慢可以把地址替换为我们提供的地址：TODO）
-wget https://download.qemu.org/qemu-4.2.0.tar.xz
+wget https://download.qemu.org/qemu-5.0.0.tar.xz
 # 解压
-tar xvJf qemu-4.2.0.tar.xz
+tar xvJf qemu-5.0.0.tar.xz
 # 编译安装并配置 RISC-V 支持
-cd qemu-4.2.0
+cd qemu-5.0.0
 ./configure --target-list=riscv32-softmmu,riscv64-softmmu
 make -j$(nproc)
 sudo make install

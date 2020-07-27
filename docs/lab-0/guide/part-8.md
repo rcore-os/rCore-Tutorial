@@ -11,7 +11,7 @@ $ qemu-system-riscv64 \
   --nographic \
   --bios default
 
-OpenSBI v0.4 (Jul  2 2019 11:53:53)
+OpenSBI v0.6
    ____                    _____ ____ _____
   / __ \                  / ____|  _ \_   _|
  | |  | |_ __   ___ _ __ | (___ | |_) || |
@@ -26,11 +26,13 @@ Platform HART Features : RV64ACDFIMSU
 Platform Max HARTs     : 8
 Current Hart           : 0
 Firmware Base          : 0x80000000
-Firmware Size          : 112 KB
-Runtime SBI Version    : 0.1
+Firmware Size          : 120 KB
+Runtime SBI Version    : 0.2
 
-PMP0: 0x0000000080000000-0x000000008001ffff (A)
-PMP1: 0x0000000000000000-0xffffffffffffffff (A,R,W,X)
+MIDELEG : 0x0000000000000222
+MEDELEG : 0x000000000000b109
+PMP0    : 0x0000000080000000-0x000000008001ffff (A)
+PMP1    : 0x0000000000000000-0xffffffffffffffff (A,R,W,X)
 ```
 
 可以看到我们已经在 qemu-system-riscv64 模拟的 QEMU Virt Machine 硬件上将 OpenSBI 这个固件跑起来了。QEMU 可以使用 `ctrl+a` （macOS 为 `control+a`） 再按下 `x` 键退出。
