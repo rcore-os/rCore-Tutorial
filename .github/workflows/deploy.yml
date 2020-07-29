@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
-      - name: Install node.js
+      - name: Install Node.js
         uses: actions/setup-node@v2.1.0
         with:
           node-version: '12.x'
@@ -26,4 +26,4 @@ jobs:
           external_repository: rcore-os/rCore-Tutorial-deploy
           publish_branch: master
           publish_dir: ./_book
-          commit_message: "[Auto-Deploy] ${{ github.event.head_commit.message }}"
+          commit_message: "[Auto-Deploy] "
