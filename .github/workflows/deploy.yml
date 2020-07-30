@@ -1,0 +1,29 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Node.js
+        uses: actions/setup-node@v2.1.0
+        with:
+          node-version: '12.x'
+      - name: Build GitBook
+        run: |
+          npm install gitbook-cli -g
+          gitbook install
+          gitbook build
+      - name: Push to remote repo
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.ACTIONS_DEPLOY_KEY }}
+          external_repository: rcore-os/rCore-Tutorial-deploy
+          publish_branch: master
+          publish_dir: ./_book
+          commit_message: "[Auto-Deploy] "
