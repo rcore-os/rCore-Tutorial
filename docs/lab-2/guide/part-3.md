@@ -131,7 +131,7 @@ pub trait Allocator {
 }
 ```
 
-并在 `os/src/algorithm/src/allocator/` 中分别实现了链表和线段树算法，具体内容可以参考代码。
+并在 `os/src/algorithm/src/allocator/` 中分别实现了栈式分配和线段树分配，具体内容可以参考代码。
 
 需要注意，我们使用了 `lazy_static!` 和 `Mutex` 来包装分配器，且对于 `static mut` 类型的修改操作是 unsafe 的。对于静态全局数据，所有的线程都能访问。当一个线程正在访问这段数据的时候，如果另一个线程也来访问，就可能会产生冲突，并带来难以预测的结果。我们在后面的章节会进一步介绍线程和 Mutex 等概念。
 

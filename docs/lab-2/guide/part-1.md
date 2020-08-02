@@ -8,7 +8,7 @@
 - 引用计数 `Rc<T>`，原子引用计数 `Arc<T>`，主要用于在引用计数清零，即某对象不再被引用时，对该对象进行自动回收；
 - 一些 Rust std 标准库中的数据结构，如 `Vec` 和 `HashMap` 等。
 
-我们编写的操作系统不能直接使用 Rust std 标准库提供的动态内存分配功能，因为这些功能需要底层操作系统的支持，这就形成了递归依赖的矛盾了。为了在我们的内核中支持动态内存分配，在 Rust 语言中，我们需要实现 `Trait GlobalAlloc`，将这个类实例化，并使用语义项 `#[global_allocator]` 进行标记。这样的话，编译器就会知道如何使用我们提供的内存分配函数进行动态内存分配。
+我们编写的操作系统不能直接使用 Rust std 标准库提供的动态内存分配功能，因为这些功能需要底层操作系统的支持，这就形成了循环依赖的矛盾了。为了在我们的内核中支持动态内存分配，在 Rust 语言中，我们需要实现 `Trait GlobalAlloc`，将这个类实例化，并使用语义项 `#[global_allocator]` 进行标记。这样的话，编译器就会知道如何使用我们提供的内存分配函数进行动态内存分配。
 
 为了实现 `Trait GlobalAlloc`，我们需要支持这么两个函数：
 
@@ -37,7 +37,7 @@ unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout);
 
 ### 支持动态内存分配
 
-为了避免重复造轮子，我们可以直接开一个静态的 8M 数组作为堆的空间，然后调用 [@jiege](https://github.com/jiegec/) 开发的 Buddy System Allocator。
+为了避免重复造轮子，我们可以直接开一个静态的 8M 数组作为堆的空间，然后调用 [@jiege](https://github.com/jiegec/) 开发的 [Buddy System Allocator](https://github.com/rcore-os/buddy_system_allocator)。
 
 {% label %}os/src/memory/config.rs{% endlabel %}
 ```rust
