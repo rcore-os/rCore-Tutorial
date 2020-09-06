@@ -112,10 +112,8 @@ impl Mapping {
                         page_data
                     };
 
-                    println!("vpn = {}", vpn);
                     // 建立映射，先检查是否有配额来分配新的物理页面
                     if !self.mapped_pairs.full() {
-                        println!("not full, alloc a new frame");
                         // 有配额，分配新的物理页面
                         let mut frame = FRAME_ALLOCATOR.lock().alloc()?;
                         // 更新页表
@@ -125,7 +123,6 @@ impl Mapping {
                         // 保存
                         self.mapped_pairs.push(vpn, frame, entry);
                     } else {
-                        println!("full!");
                         // 配额用完，改为在置换文件中分配一个页面
                         let swap_page = SwapTracker::new()?;
                         // 更新页表
