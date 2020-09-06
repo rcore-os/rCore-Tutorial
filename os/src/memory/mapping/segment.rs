@@ -9,6 +9,7 @@ pub enum MapType {
     Linear,
     /// 按帧分配映射
     Framed,
+    Device,
 }
 
 /// 一个映射片段（对应旧 tutorial 的 `MemoryArea`）
@@ -30,6 +31,7 @@ impl Segment {
             MapType::Linear => Some(self.page_range().into().iter()),
             // 按帧映射无法直接获得物理地址，需要分配
             MapType::Framed => None,
+            MapType::Device => None,
         }
     }
 

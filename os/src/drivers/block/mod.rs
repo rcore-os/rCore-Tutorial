@@ -7,6 +7,7 @@ use alloc::sync::Arc;
 use rcore_fs::dev;
 
 pub mod virtio_blk;
+pub mod sdcard;
 
 /// 块设备抽象（驱动的引用）
 pub struct BlockDevice(pub Arc<dyn Driver>);

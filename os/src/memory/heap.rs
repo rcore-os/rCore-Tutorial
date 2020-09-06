@@ -9,7 +9,9 @@ use buddy_system_allocator::LockedHeap;
 ///
 /// 大小为 [`KERNEL_HEAP_SIZE`]
 /// 这段空间编译后会被放在操作系统执行程序的 bss 段
-static mut HEAP_SPACE: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
+#[repr(align(4096))]
+pub struct HeapSpace(pub [u8; KERNEL_HEAP_SIZE]);
+pub static mut HEAP_SPACE: HeapSpace = HeapSpace([0; KERNEL_HEAP_SIZE]);
 
 /// 堆，动态内存分配器
 ///
@@ -24,12 +26,12 @@ pub fn init() {
     // 告诉分配器使用这一段预留的空间作为堆
     unsafe {
         HEAP.lock()
-            .init(HEAP_SPACE.as_ptr() as usize, KERNEL_HEAP_SIZE)
+            .init(HEAP_SPACE.0.as_ptr() as usize, KERNEL_HEAP_SIZE)
     }
 }
 
 /// 空间分配错误的回调，直接 panic 退出
 #[alloc_error_handler]
-fn alloc_error_handler(_: alloc::alloc::Layout) -> ! {
-    panic!("alloc error")
+fn alloc_error_handler(layout: alloc::alloc::Layout) -> ! {
+    panic!("alloc error, layout = {:?}", layout)
 }

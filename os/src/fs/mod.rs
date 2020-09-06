@@ -5,6 +5,7 @@
 use crate::drivers::{
     block::BlockDevice,
     driver::{DeviceType, DRIVERS},
+    block::sdcard::Sd_card,
 };
 use crate::kernel::Condvar;
 use alloc::{sync::Arc, vec::Vec};
@@ -26,6 +27,7 @@ pub use stdin::STDIN;
 pub use stdout::STDOUT;
 pub use swap::SwapTracker;
 
+#[cfg(feature = "board_qemu")]
 lazy_static! {
     /// 根文件系统的根目录的 INode
     pub static ref ROOT_INODE: Arc<dyn INode> = {
@@ -41,6 +43,16 @@ lazy_static! {
             }
         }
         panic!("failed to load fs")
+    };
+}
+
+#[cfg(feature = "board_k210")]
+lazy_static! {
+    /// 根文件系统的根目录的 INode
+    pub static ref ROOT_INODE: Arc<dyn INode> = {
+        let device = Arc::new(Sd_card::new());
+        let sfs = SimpleFileSystem::open(device).expect("failed to open SFS");
+        sfs.root_inode()
     };
 }
 

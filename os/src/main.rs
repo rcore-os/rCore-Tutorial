@@ -43,12 +43,14 @@
 mod console;
 mod drivers;
 mod fs;
-mod interrupt;
+pub mod interrupt;
 mod kernel;
 mod memory;
 mod panic;
 mod process;
 mod sbi;
+mod board;
+
 extern crate alloc;
 
 use alloc::sync::Arc;
@@ -65,9 +67,10 @@ global_asm!(include_str!("entry.asm"));
 /// 在 `_start` 为我们进行了一系列准备之后，这是第一个被调用的 Rust 函数
 #[no_mangle]
 pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
+    memory::clear_bss();
     memory::init();
     interrupt::init();
-    drivers::init(dtb_pa);
+    crate::board::device_init(dtb_pa);
     fs::init();
 
     PROCESSOR.lock().add_thread(create_kernel_thread(
@@ -81,8 +84,12 @@ pub extern "C" fn rust_main(_hart_id: usize, dtb_pa: PhysicalAddress) -> ! {
     }
     // 获取第一个线程的 Context
     let context = PROCESSOR.lock().prepare_next_thread();
+
     // 启动第一个线程
-    unsafe { __restore(context as usize) };
+    unsafe {
+        llvm_asm!("fence.i" :::: "volatile");
+        __restore(context as usize);
+    }
     unreachable!()
 }
 

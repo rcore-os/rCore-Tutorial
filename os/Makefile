@@ -3,6 +3,17 @@ MODE        := debug
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 
+BOARD		?= qemu
+SBI			?= rustsbi
+BOOTLOADER	:= ../bootloader/$(SBI)-$(BOARD).bin
+
+# Run K210
+K210-SERIALPORT	= /dev/ttyUSB0
+K210-BURNER		= ../tools/kflash.py	
+
+# Disassembly
+DISASM		?= -d
+
 USER_DIR    := ../user
 USER_BUILD  := $(USER_DIR)/build
 IMG_FILE    := $(USER_BUILD)/disk.img
@@ -21,32 +32,42 @@ doc:
 
 # 编译 kernel
 kernel:
-	@cargo build
+	@cp src/board/$(BOARD)/linker.ld src/linker.ld
+	@cargo build --features "board_$(BOARD)"
 
 # 生成 kernel 的二进制文件
 $(BIN_FILE): kernel
 	@$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $@
 
+
 # 查看反汇编结果
 asm:
-	@$(OBJDUMP) -d $(KERNEL_FILE) | less
+	@$(OBJDUMP) $(DISASM) $(KERNEL_FILE) | less
 
 # 清理编译出的文件
 clean:
 	@cargo clean
 
 # 运行 QEMU
-qemu: build
+run-inner: build
+ifeq ($(BOARD),qemu)
 	@qemu-system-riscv64 \
     		-machine virt \
     		-nographic \
-    		-bios default \
+    		-bios $(BOOTLOADER) \
     		-device loader,file=$(BIN_FILE),addr=0x80200000 \
     		-drive file=$(IMG_FILE),format=qcow2,id=sfs \
     		-device virtio-blk-device,drive=sfs
+else
+	@cp $(BOOTLOADER) $(BOOTLOADER).copy
+	@dd if=$(BIN_FILE) of=$(BOOTLOADER).copy bs=128K seek=1
+	@mv $(BOOTLOADER).copy $(BIN_FILE)
+	@sudo chmod 777 $(K210-SERIALPORT)
+	python3 $(K210-BURNER) -p $(K210-SERIALPORT) -b 1500000 -t $(BIN_FILE)
+endif
 
 # 一键运行
-run: build qemu
+run: build run-inner
 
 # 一键 gdb
 debug: build

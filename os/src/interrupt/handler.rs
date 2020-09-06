@@ -9,6 +9,12 @@ use riscv::register::{
     scause::{Exception, Interrupt, Scause, Trap},
     sie, stvec,
 };
+use crate::board::interrupt::{
+    breakpoint,
+    supervisor_timer,
+    supervisor_soft,
+    supervisor_external,
+};
 
 global_asm!(include_str!("./interrupt.asm"));
 
@@ -26,15 +32,7 @@ pub fn init() {
 
         // 开启外部中断使能
         sie::set_sext();
-
-        // 在 OpenSBI 中开启外部中断
-        *PhysicalAddress(0x0c00_2080).deref_kernel() = 1u32 << 10;
-        // 在 OpenSBI 中开启串口
-        *PhysicalAddress(0x1000_0004).deref_kernel() = 0x0bu8;
-        *PhysicalAddress(0x1000_0001).deref_kernel() = 0x01u8;
-        // 其他一些外部中断相关魔数
-        *PhysicalAddress(0x0C00_0028).deref_kernel() = 0x07u32;
-        *PhysicalAddress(0x0C20_1000).deref_kernel() = 0u32;
+        sie::set_ssoft();
     }
 }
 
@@ -68,18 +66,10 @@ pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> 
         Trap::Interrupt(Interrupt::SupervisorTimer) => supervisor_timer(context),
         // 外部中断（键盘输入）
         Trap::Interrupt(Interrupt::SupervisorExternal) => supervisor_external(context),
+        Trap::Interrupt(Interrupt::SupervisorSoft) => supervisor_soft(context),
         // 其他情况，无法处理
         _ => fault("unimplemented interrupt type", scause, stval),
     }
-}
-
-/// 处理 ebreak 断点
-///
-/// 继续执行，其中 `sepc` 增加 2 字节，以跳过当前这条 `ebreak` 指令
-fn breakpoint(context: &mut Context) -> *mut Context {
-    println!("Breakpoint at 0x{:x}", context.sepc);
-    context.sepc += 2;
-    context
 }
 
 /// 处理缺页异常
@@ -101,25 +91,6 @@ fn page_fault(context: &mut Context, scause: Scause, stval: usize) -> *mut Conte
         }
         Err(msg) => fault(msg, scause, stval),
     }
-}
-
-/// 处理时钟中断
-fn supervisor_timer(context: &mut Context) -> *mut Context {
-    timer::tick();
-    PROCESSOR.lock().park_current_thread(context);
-    PROCESSOR.lock().prepare_next_thread()
-}
-
-/// 处理外部中断，只实现了键盘输入
-fn supervisor_external(context: &mut Context) -> *mut Context {
-    let mut c = console_getchar();
-    if c <= 255 {
-        if c == '\r' as usize {
-            c = '\n' as usize;
-        }
-        STDIN.push(c as u8);
-    }
-    context
 }
 
 /// 出现未能解决的异常，终止当前线程

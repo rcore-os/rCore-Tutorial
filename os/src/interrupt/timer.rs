@@ -40,3 +40,5 @@ pub fn tick() {
         // }
     }
 }
+
+pub fn read_time() -> usize { time::read() }

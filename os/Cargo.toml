@@ -20,6 +20,12 @@ virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers" }
 rcore-fs = { git = "https://github.com/rcore-os/rcore-fs"}
 rcore-fs-sfs = { git = "https://github.com/rcore-os/rcore-fs"}
 xmas-elf = "0.7.0"
+k210-hal = { path = "../tools/k210-hal" }
+k210-pac = { path = "../tools/k210-pac" }
+
+[features]
+board_qemu = []
+board_k210 = []
 
 # panic 时直接终止，因为我们没有实现堆栈展开的功能
 [profile.dev]

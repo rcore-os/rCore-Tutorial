@@ -5,6 +5,7 @@ use super::*;
 pub const SYS_READ: usize = 63;
 pub const SYS_WRITE: usize = 64;
 pub const SYS_EXIT: usize = 93;
+pub const SYS_EXEC: usize = 221;
 
 /// 系统调用在内核之内的返回值
 pub(super) enum SyscallResult {
@@ -28,6 +29,7 @@ pub fn syscall_handler(context: &mut Context) -> *mut Context {
         SYS_READ => sys_read(args[0], args[1] as *mut u8, args[2]),
         SYS_WRITE => sys_write(args[0], args[1] as *mut u8, args[2]),
         SYS_EXIT => sys_exit(args[0]),
+        SYS_EXEC => sys_exec(args[0] as *const u8, *context),
         _ => {
             println!("unimplemented syscall: {}", syscall_id);
             SyscallResult::Kill

@@ -4,7 +4,7 @@
 
 mod context;
 mod handler;
-mod timer;
+pub mod timer;
 
 pub use context::Context;
 

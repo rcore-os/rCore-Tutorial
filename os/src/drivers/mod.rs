@@ -8,6 +8,7 @@ pub mod block;
 pub mod bus;
 pub mod device_tree;
 pub mod driver;
+pub mod soc;
 
 /// 从设备树的物理地址来获取全部设备信息并初始化
 pub fn init(dtb_pa: PhysicalAddress) {
