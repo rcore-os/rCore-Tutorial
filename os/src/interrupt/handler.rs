@@ -52,6 +52,8 @@ pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> 
             return processor.prepare_next_thread();
         }
     }
+    //println!("into intr handle!");
+    //println!("cause = {:?}", scause.cause());
     // 根据中断类型来处理，返回的 Context 必须位于放在内核栈顶
     match scause.cause() {
         // 断点中断（ebreak）
@@ -61,7 +63,10 @@ pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) -> 
         // 缺页异常
         Trap::Exception(Exception::LoadPageFault)
         | Trap::Exception(Exception::StorePageFault)
-        | Trap::Exception(Exception::InstructionPageFault) => page_fault(context, scause, stval),
+        | Trap::Exception(Exception::InstructionPageFault)
+        | Trap::Exception(Exception::LoadFault)
+        | Trap::Exception(Exception::StoreFault)
+        | Trap::Exception(Exception::InstructionFault) => page_fault(context, scause, stval),
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => supervisor_timer(context),
         // 外部中断（键盘输入）

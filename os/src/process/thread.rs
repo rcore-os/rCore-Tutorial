@@ -62,6 +62,7 @@ impl Thread {
     ) -> MemoryResult<Arc<Thread>> {
         // 让所属进程分配并映射一段空间，作为线程的栈
         let stack = process.alloc_page_range(STACK_SIZE, Flags::READABLE | Flags::WRITABLE)?;
+        println!("stack = {}, {}", stack.start, stack.end);
 
         // 构建线程的 Context
         let context = Context::new(stack.end.into(), entry_point, arguments, process.is_user);

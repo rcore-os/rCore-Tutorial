@@ -69,6 +69,7 @@ impl Process {
             range.end += alloc_size;
         }
         // 分配物理页面，建立映射
+        println!("start running stack mapping!");
         memory_set.add_segment(
             Segment {
                 map_type: MapType::Framed,

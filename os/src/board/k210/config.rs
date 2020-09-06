@@ -2,8 +2,8 @@
 
 pub const BOARD_MEMORY_END_ADDRESS: usize = 0x8060_0000;
 pub const BOARD_KERNEL_HEAP_SIZE: usize = 0x30_0000;
-pub const BOARD_STACK_SIZE: usize = 0x8000;
-pub const BOARD_KERNEL_STACK_SIZE: usize = 0x8000;
+pub const BOARD_STACK_SIZE: usize = 0x8_0000;
+pub const BOARD_KERNEL_STACK_SIZE: usize = 0x8_0000;
 
 pub const MMIO_INTERVALS: &[(usize, usize)] = &[
     (0x0200_0000, 0x1000), /* CLINT     */
