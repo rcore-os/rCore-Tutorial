@@ -28,7 +28,7 @@ brew install qemu
 
 {% label %}运行命令{% endlabel %}
 ```bash
-# 下载源码包 （如果下载速度过慢可以把地址替换为我们提供的地址：TODO）
+# 下载源码包 （如果下载速度过慢可以把地址替换为我们提供的地址：http://42.194.184.212:5212/#/s/4dHZ）
 wget https://download.qemu.org/qemu-5.0.0.tar.xz
 # 解压
 tar xvJf qemu-5.0.0.tar.xz
@@ -60,6 +60,8 @@ sudo yum install qemu
 ### Windows WSL 2
 
 [WSL](https://docs.microsoft.com/zh-cn/windows/wsl/)（Windows Subsystem for Linux）是指 Windows 下构建 Linux 环境。你可以在使用 Windows 的同时，方便地进行 Linux 下的开发，并且 Linux 子系统上可以访问 Windows 的文件系统。但是，WSL 在安装 Rust 时会出现环境配置方面的问题，因此这里我们采用新版的 WSL，即 WSL 2。
+
+注意 Ubuntu18.04 版本可以正常进行实验，而 Ubuntu20.04 版本会有一些小问题。
 
 WSL 2 和 Ubuntu 环境安装步骤：
 
@@ -134,7 +136,20 @@ export http_proxy=http://127.0.0.1:1080
 export ftp_proxy=http://127.0.0.1:1080
 ```
 
-安装完成后，**最好**我们也可以把软件包管理器 cargo 所用的软件包镜像地址 crates.io 也换成中国科学技术大学的镜像服务器来加速。我们打开（如果没有就新建）`~/.cargo/config` 文件，并把内容修改为：
+安装完成后，我们可以重新打开一个终端来让之前设置的环境变量生效。我们也可以手动将环境变量设置应用到当前终端，只需要输入以下命令：
+```bash
+source $HOME/.cargo/env
+```
+接下来，我们可以确认一下我们正确安装了 Rust 工具链：
+```bash
+rustc --version
+```
+可以看到当前安装的工具链的版本。
+```bash
+rustc 1.46.0-nightly (7750c3d46 2020-06-26)
+```
+
+我们**最好**把软件包管理器 cargo 所用的软件包镜像地址 crates.io 也换成中国科学技术大学的镜像服务器来加速三方库的下载。我们打开（如果没有就新建）`~/.cargo/config` 文件，并把内容修改为：
 
 {% label %}~/.cargo/config{% endlabel %}
 ```toml
@@ -151,9 +166,16 @@ registry = "git://mirrors.ustc.edu.cn/crates.io-index"
 {% label %}运行命令{% endlabel %}
 ```bash
 # 克隆仓库并编译运行
-git clone TODO
+git clone https://github.com/rcore-os/rCore-Tutorial
 cd rCore-Tutorial
 git checkout master
+
+# 添加一些编译依赖
+# 增加RISC-V三元组
+rustup target add riscv64imac-unknown-none-elf
+# 增加需要的 cargo-binutils
+cargo install cargo-binutils
+rustup component add llvm-tools-preview
 
 # 编译运行
 make run
@@ -163,7 +185,51 @@ make run
 
 {% label %}运行输出{% endlabel %}
 ```bash
-TODO
+OpenSBI v0.5 (Oct  9 2019 12:03:04)
+   ____                    _____ ____ _____
+  / __ \                  / ____|  _ \_   _|
+ | |  | |_ __   ___ _ __ | (___ | |_) || |
+ | |  | | '_ \ / _ \ '_ \ \___ \|  _ < | |
+ | |__| | |_) |  __/ | | |____) | |_) || |_
+  \____/| .__/ \___|_| |_|_____/|____/_____|
+        | |
+        |_|
+
+Platform Name          : QEMU Virt Machine
+Platform HART Features : RV64ACDFIMSU
+Platform Max HARTs     : 8
+Current Hart           : 0
+Firmware Base          : 0x80000000
+Firmware Size          : 116 KB
+Runtime SBI Version    : 0.2
+
+PMP0: 0x0000000080000000-0x000000008001ffff (A)
+PMP1: 0x0000000000000000-0xffffffffffffffff (A,R,W,X)
+mod memory initialized
+mod interrupt initialized
+mod driver initialized
+.
+..
+hello_world
+notebook
+mod fs initialized
+hello from kernel thread 7
+thread 7 exit
+hello from kernel thread 6
+thread 6 exit
+hello from kernel thread 5
+thread 5 exit
+hello from kernel thread 4
+thread 4 exit
+hello from kernel thread 3
+thread 3 exit
+hello from kernel thread 1
+thread 1 exit
+hello from kernel thread 8
+thread 8 exit
+hello from kernel thread 2
+thread 2 exit
+src/process/processor.rs:87: 'all threads terminated, shutting down'
 ```
 
 需要说明的是，Rust 包含 stable、beta 和 nightly 三个版本。默认情况下我们安装的是 stable 稳定版。由于在编写操作系统时需要使用 Rust 的一些不稳定的实验功能，因此我们使用 nightly 每日构建版。
@@ -178,3 +244,5 @@ nightly-2020-06-27
 ```
 
 在第一次编译项目时，rustup 会自动去下载对应版本的工具链。今后所有在这个目录或其子目录下使用 Rust 时都会自动切换到这个版本的工具链。随着日后的更新，后面的日期可能会变化，请以 GitHub 仓库上的版本为准。
+
+万事俱备，让我们正式开始实验吧！
