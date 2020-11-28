@@ -29,6 +29,7 @@ pub trait Scheduler<ThreadType: Clone + Eq>: Default {
 
 {% label %}os/src/main.rs{% endlabel %}
 ```rust
+#[no_mangle]
 pub extern "C" fn rust_main() -> ! {
     memory::init();
     interrupt::init();
