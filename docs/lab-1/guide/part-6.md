@@ -93,6 +93,8 @@ pub fn tick() {
 
 {% label %}os/src/interrupt/handler.rs{% endlabel %}
 ```rust
+use riscv::register::scause::{Exception, Interrupt, Scause, Trap};
+  
 /// 中断的处理入口
 /// 
 /// `interrupt.asm` 首先保存寄存器至 Context，其作为参数和 scause 以及 stval 一并传入此函数
@@ -100,7 +102,7 @@ pub fn tick() {
 #[no_mangle]
 pub fn handle_interrupt(context: &mut Context, scause: Scause, stval: usize) {
     // 可以通过 Debug 来查看发生了什么中断
-    // println!("{:x?}", context.scause.cause());
+    // println!("{:x?}", scause.cause());
     match scause.cause() {
         // 断点中断（ebreak）
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),

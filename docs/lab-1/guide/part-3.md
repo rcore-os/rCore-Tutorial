@@ -8,7 +8,7 @@
 
 {% label %}os/src/interrupt/context.rs{% endlabel %}
 ```rust
-use riscv::register::{sstatus::Sstatus, scause::Scause};
+use riscv::register::sstatus::Sstatus;
 
 #[repr(C)]
 #[derive(Debug)]
