@@ -78,6 +78,7 @@ mod interrupt;
 /// Rust 的入口函数
 ///
 /// 在 `_start` 为我们进行了一系列准备之后，这是第一个被调用的 Rust 函数
+#[no_mangle]
 pub extern "C" fn rust_main() -> ! {
     // 初始化各种模块
     interrupt::init();
