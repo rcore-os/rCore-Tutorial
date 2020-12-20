@@ -70,9 +70,13 @@ impl Mapping {
             // 需要分配帧进行映射
             MapType::Framed => {
                 for vpn in segment.page_range().iter() {
-                    // 页面的数据，默认为全零
-                    let mut page_data = [0u8; PAGE_SIZE];
-                    // 如果提供了数据，则使用这些数据来填充 page_data
+                    // 建立映射
+                    let mut frame = FRAME_ALLOCATOR.lock().alloc()?;
+                    // 更新页表
+                    self.map_one(vpn, Some(frame.page_number()), segment.flags)?;
+                    // 将页面的数据清零
+                    (*frame).fill(0);
+                    // 如果提供了数据，则使用这些数据来填充页面
                     if let Some(init_data) = init_data {
                         if !init_data.is_empty() {
                             // 这里必须进行一些调整，因为传入的数据可能并非按照整页对齐
@@ -90,19 +94,12 @@ impl Mapping {
                             };
                             let stop = min(PAGE_SIZE, segment.range.end - page_address);
                             // 计算来源和目标区间并进行拷贝
-                            let dst_slice = &mut page_data[start..stop];
+                            let dst_slice = &mut (*frame)[start..stop];
                             let src_slice = &init_data[(page_address + start - segment.range.start)
                                 ..(page_address + stop - segment.range.start)];
                             dst_slice.copy_from_slice(src_slice);
                         }
                     };
-
-                    // 建立映射
-                    let mut frame = FRAME_ALLOCATOR.lock().alloc()?;
-                    // 更新页表
-                    self.map_one(vpn, Some(frame.page_number()), segment.flags)?;
-                    // 写入数据
-                    (*frame).copy_from_slice(&page_data);
                     // 保存
                     self.mapped_pairs.push_back((vpn, frame));
                 }
