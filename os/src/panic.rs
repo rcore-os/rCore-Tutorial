@@ -1,6 +1,6 @@
 //! 代替 std 库，实现 panic 和 abort 的功能
 
-use crate::sbi::shutdown;
+use crate::sbi::sbi_hart_stop;
 use core::panic::PanicInfo;
 
 /// 打印 panic 的信息并 [`shutdown`]
@@ -23,7 +23,14 @@ fn panic_handler(info: &PanicInfo) -> ! {
     } else {
         println!("\x1b[1;31mpanic: '{}'\x1b[0m", info.message().unwrap());
     }
-    shutdown()
+
+    // This call is not expected to return under normal conditions.
+    // Returns SBI_ERR_FAILED through sbiret.error only if it fails, 
+    // where SBI_ERR_FAILED = -1.
+    let sbiret = sbi_hart_stop();
+    println!("sbiret.error = {}, sbiret.value = {}", sbiret.error, sbiret.value);
+    
+    unreachable!()
 }
 
 /// 终止程序
