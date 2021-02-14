@@ -59,10 +59,10 @@ __interrupt:
     .endr
 
     # 取出 CSR 并保存
-    csrr    s1, sstatus
-    csrr    s2, sepc
-    SAVE    s1, 32
-    SAVE    s2, 33
+    csrr    t0, sstatus
+    csrr    t1, sepc
+    SAVE    t0, 32
+    SAVE    t1, 33
 
     # 调用 handle_interrupt，传入参数
     # context: &mut Context
@@ -78,10 +78,10 @@ __interrupt:
 # 从 Context 中恢复所有寄存器，并跳转至 Context 中 sepc 的位置
 __restore:
     # 恢复 CSR
-    LOAD    s1, 32
-    LOAD    s2, 33
-    csrw    sstatus, s1
-    csrw    sepc, s2
+    LOAD    t0, 32
+    LOAD    t1, 33
+    csrw    sstatus, t0
+    csrw    sepc, t1
 
     # 恢复通用寄存器
     LOAD    x1, 1
