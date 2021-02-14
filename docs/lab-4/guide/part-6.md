@@ -58,7 +58,7 @@ pub extern "C" fn rust_main() -> ! {
     unreachable!()
 }
 
-fn sample_process(message: usize) {
+fn sample_process(id: usize) {
     println!("hello from kernel thread {}", id);
 }
 ```
