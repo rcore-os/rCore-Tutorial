@@ -3,7 +3,7 @@ name: 1 Bug 汇报
 about: 汇报 rCore-Tutorial 中遇到的问题
 title: ''
 labels: bug
-assignees: Tuyixiang
+assignees: ''
 
 ---
 
