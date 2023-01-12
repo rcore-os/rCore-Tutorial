@@ -1,6 +1,4 @@
-# rCore-Tutorial V3（开发中）
-
-[![Actions Status](https://github.com/rcore-os/rCore-Tutorial/workflows/CI/badge.svg?branch=master)](https://github.com/rcore-os/rCore-Tutorial/actions)
+# rCore-Tutorial V3
 
 [本教学仓库](https://github.com/rcore-os/rCore-Tutorial)是继 [rCore_tutorial V2](https://rcore-os.github.io/rCore_tutorial_doc/) 后重构的 V3 版本。
 
