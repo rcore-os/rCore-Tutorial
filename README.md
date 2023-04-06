@@ -1,5 +1,7 @@
 # rCore-Tutorial V3
 
+**注意：本项目已经不再维护，有兴趣的同学请看[rCore-Tutorial-v3](https://github.com/rcore-os/rCore-Tutorial-v3)。**
+
 [本教学仓库](https://github.com/rcore-os/rCore-Tutorial)是继 [rCore_tutorial V2](https://rcore-os.github.io/rCore_tutorial_doc/) 后重构的 V3 版本。
 
 本文档的目标主要针对「做实验的同学」，我们会对每章结束后提供完成的代码，你的练习题只需要基于我们给出的版本上增量实现即可，不需要重新按照教程写一遍。
