@@ -42,8 +42,8 @@ impl Thread {
         self.process.inner().memory_set.activate();
         // 取出 Context
         let parked_frame = self.inner().context.take().unwrap();
-        // 将 Context 放至内核栈顶
-        unsafe { KERNEL_STACK.push_context(parked_frame) }
+        // 将 Context 放至中断栈顶
+        unsafe { INTERRUPT_STACK.push_context(parked_frame) }
     }
 
     /// 发生时钟中断后暂停线程，保存状态

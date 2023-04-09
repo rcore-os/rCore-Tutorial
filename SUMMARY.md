@@ -51,7 +51,7 @@
   * [线程的创建](docs/lab-4/guide/part-2.md)
   * [线程的切换](docs/lab-4/guide/part-3.md)
   * [线程的结束](docs/lab-4/guide/part-4.md)
-  * [内核栈](docs/lab-4/guide/part-5.md)
+  * [中断栈](docs/lab-4/guide/part-5.md)
   * [线程调度](docs/lab-4/guide/part-6.md)
   * [小结](docs/lab-4/guide/summary.md)
 * 实验指导五
